@@ -1,5 +1,9 @@
 package uz.pulsepay.identity.adapter.in.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +23,7 @@ import uz.pulsepay.identity.domain.port.out.UserRepository;
 import uz.pulsepay.infrastructure.security.JwtTokenProvider;
 import uz.pulsepay.shared.exception.NotFoundException;
 
+@Tag(name = "Authentication", description = "OTP-based passwordless login for registered users")
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -38,6 +43,13 @@ public class AuthController {
         this.jwtTokenProvider = jwtTokenProvider;
     }
 
+    @Operation(summary = "Request login OTP",
+               description = "Sends a 6-digit OTP to the registered phone number. Valid for 59 seconds; 3 failed attempts trigger a 15-minute lockout.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "OTP dispatched"),
+            @ApiResponse(responseCode = "404", description = "Phone number not registered"),
+            @ApiResponse(responseCode = "429", description = "OTP lockout active")
+    })
     @PostMapping("/otp")
     public ResponseEntity<Void> requestOtp(@Valid @RequestBody RequestOtpRequest request) {
         User user = userRepository.findByPhoneE164(request.phoneE164())
@@ -46,6 +58,14 @@ public class AuthController {
         return ResponseEntity.accepted().build();
     }
 
+    @Operation(summary = "Verify OTP and obtain JWT",
+               description = "Validates the OTP and issues a short-lived access token (15 min) plus a refresh token. "
+                       + "If a new device is detected, `requiresBiometricStepUp=true` is returned and the client must complete AUTH-02 biometric confirmation.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OTP accepted — JWT returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired OTP"),
+            @ApiResponse(responseCode = "404", description = "Phone number not registered")
+    })
     @PostMapping("/verify")
     public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request,
                                                    HttpServletRequest httpRequest) {

@@ -1,5 +1,11 @@
 package uz.pulsepay.transfer.adapter.in.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +21,8 @@ import uz.pulsepay.transfer.domain.port.in.InitiateTransferPort;
 
 import java.util.UUID;
 
+@Tag(name = "Transfers", description = "P2P card transfer lifecycle: initiate → OTP confirm → completed/failed")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/v1/transfers")
 public class TransferController {
@@ -31,6 +39,15 @@ public class TransferController {
         this.getTransferPort = getTransferPort;
     }
 
+    @Operation(summary = "Initiate a transfer",
+               description = "Creates a transfer in `otp_pending` status. Idempotent: re-submitting the same "
+                       + "`idempotencyKey` returns the cached response without creating a duplicate.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Transfer created — awaiting OTP confirmation"),
+            @ApiResponse(responseCode = "400", description = "Validation error or business rule violation (limit exceeded, invalid channel, etc.)"),
+            @ApiResponse(responseCode = "409", description = "Idempotency key already used with different parameters"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
     @PostMapping
     public ResponseEntity<Transfer> initiate(
             @Valid @RequestBody InitiateTransferRequest request,
@@ -56,18 +73,33 @@ public class TransferController {
         return ResponseEntity.accepted().body(transfer);
     }
 
+    @Operation(summary = "Confirm transfer OTP",
+               description = "Submits the 6-digit OTP to authorise the transfer. On success the transfer moves to "
+                       + "`processing`, the network call is made, ledger entries are posted, and status becomes `completed` or `failed`.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OTP accepted — transfer processed"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired OTP"),
+            @ApiResponse(responseCode = "404", description = "Transfer not found or not owned by caller"),
+            @ApiResponse(responseCode = "409", description = "Transfer is not in otp_pending status")
+    })
     @PatchMapping("/{id}/otp")
     public ResponseEntity<Transfer> confirmOtp(
-            @PathVariable UUID id,
+            @Parameter(description = "Transfer UUID") @PathVariable UUID id,
             @Valid @RequestBody ConfirmOtpRequest request,
             @AuthenticationPrincipal String userId) {
         Transfer transfer = confirmTransferOtpPort.confirmOtp(id, UUID.fromString(userId), request.code());
         return ResponseEntity.ok(transfer);
     }
 
+    @Operation(summary = "Get transfer by ID",
+               description = "Returns the current state of a transfer. Only the sender or recipient can retrieve it.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Transfer found"),
+            @ApiResponse(responseCode = "404", description = "Transfer not found or not owned by caller")
+    })
     @GetMapping("/{id}")
     public ResponseEntity<Transfer> getTransfer(
-            @PathVariable UUID id,
+            @Parameter(description = "Transfer UUID") @PathVariable UUID id,
             @AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(getTransferPort.getById(id, UUID.fromString(userId)));
     }

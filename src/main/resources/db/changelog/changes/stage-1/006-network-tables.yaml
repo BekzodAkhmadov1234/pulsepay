@@ -1,0 +1,137 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-transaction-types
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transaction_types
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(20)
+                  constraints:
+                    unique: true
+                    nullable: false
+
+  - changeSet:
+      id: 006-transaction-failure-reasons
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transaction_failure_reasons
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: network_code
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: normalized_reason
+                  type: VARCHAR(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_message_key
+                  type: VARCHAR(60)
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 006-transactions
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transactions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transfer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: transaction_type_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: card_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: network_status_code
+                  type: VARCHAR(20)
+              - column:
+                  name: failure_reason_id
+                  type: INT
+              - column:
+                  name: status
+                  type: VARCHAR(16)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: payment_network_id
+                  type: INT
+              - column:
+                  name: settlement_batch_id
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: transfer_id
+            referencedTableName: transfers
+            referencedColumnNames: id
+            constraintName: fk_transactions_transfer
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: transaction_type_id
+            referencedTableName: transaction_types
+            referencedColumnNames: id
+            constraintName: fk_transactions_type
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: card_id
+            referencedTableName: cards
+            referencedColumnNames: id
+            constraintName: fk_transactions_card
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: failure_reason_id
+            referencedTableName: transaction_failure_reasons
+            referencedColumnNames: id
+            constraintName: fk_transactions_failure_reason
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: payment_network_id
+            referencedTableName: payment_networks
+            referencedColumnNames: id
+            constraintName: fk_transactions_payment_network
+        - sql:
+            sql: ALTER TABLE transactions ADD CONSTRAINT chk_transactions_status CHECK (status IN ('pending','success','failed'));

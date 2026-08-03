@@ -1,0 +1,167 @@
+databaseChangeLog:
+  - changeSet:
+      id: 101-merchant-categories
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: merchant_categories
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: mcc_code
+                  type: VARCHAR(4)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: name_uz
+                  type: TEXT
+              - column:
+                  name: risk_tier
+                  type: VARCHAR(10)
+                  defaultValue: standard
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE merchant_categories ADD CONSTRAINT chk_mc_risk_tier CHECK (risk_tier IN ('standard','elevated'));
+
+  - changeSet:
+      id: 101-merchants
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: merchants
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: legal_trade_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: merchant_category_id
+                  type: INT
+              - column:
+                  name: acquiring_bank_id
+                  type: UUID
+              - column:
+                  name: kyb_status
+                  type: VARCHAR(15)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: uzqr_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(15)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: merchants
+            baseColumnNames: id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_merchants_parties
+        - addForeignKeyConstraint:
+            baseTableName: merchants
+            baseColumnNames: merchant_category_id
+            referencedTableName: merchant_categories
+            referencedColumnNames: id
+            constraintName: fk_merchants_category
+        - addForeignKeyConstraint:
+            baseTableName: merchants
+            baseColumnNames: acquiring_bank_id
+            referencedTableName: banks
+            referencedColumnNames: id
+            constraintName: fk_merchants_acquiring_bank
+        - sql:
+            sql: ALTER TABLE merchants ADD CONSTRAINT chk_merchants_kyb CHECK (kyb_status IN ('pending','verified','rejected'));
+        - sql:
+            sql: ALTER TABLE merchants ADD CONSTRAINT chk_merchants_status CHECK (status IN ('pending','active','suspended','closed'));
+
+  - changeSet:
+      id: 101-merchant-accounts
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: merchant_accounts
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: merchant_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: min_payout_threshold
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settlement_schedule
+                  type: VARCHAR(15)
+                  defaultValue: daily
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(12)
+                  defaultValue: active
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: merchant_accounts
+            baseColumnNames: id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_merchant_accounts_instruments
+        - addForeignKeyConstraint:
+            baseTableName: merchant_accounts
+            baseColumnNames: merchant_id
+            referencedTableName: merchants
+            referencedColumnNames: id
+            constraintName: fk_merchant_accounts_merchant
+        - sql:
+            sql: ALTER TABLE merchant_accounts ADD CONSTRAINT chk_ma_schedule CHECK (settlement_schedule IN ('daily','weekly','on_demand'));
+        - sql:
+            sql: ALTER TABLE merchant_accounts ADD CONSTRAINT chk_ma_status CHECK (status IN ('active','suspended','closed'));

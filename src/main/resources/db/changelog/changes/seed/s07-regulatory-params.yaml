@@ -1,0 +1,132 @@
+databaseChangeLog:
+  - changeSet:
+      id: s07-regulatory-params
+      author: pulsepay
+      comment: >
+        Versioned regulatory parameters. All amounts in tiyin (1 UZS = 100 tiyin).
+        bcv = 412,000 UZS = 41,200,000 tiyin (eff. 2025-08-01, Presidential Resolution UP-108).
+        aml_cdd_one_off_threshold = 175,000,000 UZS = 17,500,000,000 tiyin (eff. 2026-08-09, CBU letter).
+        aml_enhanced_info_threshold = 25 BCV (eff. 2026-01-01, CBU AML rules update).
+        aml_large_operation_transfer_threshold = 500 BCV (eff. 2026-01-01).
+        aml_large_operation_inflow_threshold = 1000 BCV (eff. 2026-01-01).
+      changes:
+        - insert:
+            tableName: regulatory_parameters
+            columns:
+              - column:
+                  name: id
+                  value: 20000000-0000-0000-0000-000000000001
+              - column:
+                  name: code
+                  value: bcv
+              - column:
+                  name: value_amount
+                  valueNumeric: 41200000
+              - column:
+                  name: unit
+                  value: uzs
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: effective_from
+                  value: "2025-08-01T00:00:00Z"
+              - column:
+                  name: source_reference
+                  value: "Presidential Resolution UP-108 dated 2025-07-15; BCV set to 412,000 UZS effective 2025-08-01"
+        - insert:
+            tableName: regulatory_parameters
+            columns:
+              - column:
+                  name: id
+                  value: 20000000-0000-0000-0000-000000000002
+              - column:
+                  name: code
+                  value: aml_cdd_one_off_threshold
+              - column:
+                  name: value_amount
+                  valueNumeric: 17500000000
+              - column:
+                  name: unit
+                  value: uzs
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: effective_from
+                  value: "2026-08-09T00:00:00Z"
+              - column:
+                  name: source_reference
+                  value: "CBU AML/CFT letter dated 2026-08-09; one-off CDD threshold set to 175,000,000 UZS"
+        - insert:
+            tableName: regulatory_parameters
+            columns:
+              - column:
+                  name: id
+                  value: 20000000-0000-0000-0000-000000000003
+              - column:
+                  name: code
+                  value: aml_enhanced_info_threshold
+              - column:
+                  name: value_amount
+                  valueNumeric: 25
+              - column:
+                  name: unit
+                  value: bcv
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: effective_from
+                  value: "2026-01-01T00:00:00Z"
+              - column:
+                  name: source_reference
+                  value: "CBU AML rules update 2026; enhanced sender/recipient info required above 25 BCV (down from 30 BCV)"
+        - insert:
+            tableName: regulatory_parameters
+            columns:
+              - column:
+                  name: id
+                  value: 20000000-0000-0000-0000-000000000004
+              - column:
+                  name: code
+                  value: aml_large_operation_transfer_threshold
+              - column:
+                  name: value_amount
+                  valueNumeric: 500
+              - column:
+                  name: unit
+                  value: bcv
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: effective_from
+                  value: "2026-01-01T00:00:00Z"
+              - column:
+                  name: source_reference
+                  value: "CBU AML rules 2026; single-transfer monitoring threshold 500 BCV"
+        - insert:
+            tableName: regulatory_parameters
+            columns:
+              - column:
+                  name: id
+                  value: 20000000-0000-0000-0000-000000000005
+              - column:
+                  name: code
+                  value: aml_large_operation_inflow_threshold
+              - column:
+                  name: value_amount
+                  valueNumeric: 1000
+              - column:
+                  name: unit
+                  value: bcv
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: effective_from
+                  value: "2026-01-01T00:00:00Z"
+              - column:
+                  name: source_reference
+                  value: "CBU AML rules 2026; 30-day inflow monitoring threshold 1000 BCV"

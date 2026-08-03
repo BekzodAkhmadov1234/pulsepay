@@ -1,0 +1,157 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-fee-rules
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: fee_rules
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_network
+                  type: VARCHAR(10)
+              - column:
+                  name: destination_network
+                  type: VARCHAR(10)
+              - column:
+                  name: min_amount
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_amount
+                  type: BIGINT
+              - column:
+                  name: fee_type
+                  type: VARCHAR(12)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fixed_amount
+                  type: BIGINT
+              - column:
+                  name: percentage_bps
+                  type: INT
+              - column:
+                  name: min_fee_amount
+                  type: BIGINT
+              - column:
+                  name: max_fee_amount
+                  type: BIGINT
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: INT
+                  defaultValueNumeric: 100
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_from
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_to
+                  type: TIMESTAMPTZ
+              - column:
+                  name: transfer_type_id
+                  type: INT
+              - column:
+                  name: fee_payer
+                  type: VARCHAR(15)
+                  defaultValue: sender
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fee_recipient
+                  type: VARCHAR(20)
+                  defaultValue: platform
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: fee_rules
+            baseColumnNames: transfer_type_id
+            referencedTableName: transfer_types
+            referencedColumnNames: id
+            constraintName: fk_fee_rules_transfer_type
+        - sql:
+            sql: ALTER TABLE fee_rules ADD CONSTRAINT chk_fee_rules_type CHECK (fee_type IN ('fixed','percentage','tiered'));
+        - sql:
+            sql: ALTER TABLE fee_rules ADD CONSTRAINT chk_fee_rules_payer CHECK (fee_payer IN ('sender','recipient','merchant','business'));
+        - sql:
+            sql: ALTER TABLE fee_rules ADD CONSTRAINT chk_fee_rules_recipient CHECK (fee_recipient IN ('platform','issuer_bank','acquirer_bank','network','processor'));
+
+  - changeSet:
+      id: 008-fee-rule-tiers
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: fee_rule_tiers
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: fee_rule_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tier_min_amount
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tier_max_amount
+                  type: BIGINT
+              - column:
+                  name: fixed_amount
+                  type: BIGINT
+              - column:
+                  name: percentage_bps
+                  type: INT
+        - addForeignKeyConstraint:
+            baseTableName: fee_rule_tiers
+            baseColumnNames: fee_rule_id
+            referencedTableName: fee_rules
+            referencedColumnNames: id
+            constraintName: fk_fee_rule_tiers_rule

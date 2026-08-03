@@ -1,0 +1,60 @@
+databaseChangeLog:
+  # Stage 1 — core tables
+  - include:
+      file: db/changelog/changes/stage-1/001-reference-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/002-identity-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/003-party-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/004-card-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/005-transfer-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/006-network-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/007-ledger-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/008-fee-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/009-limit-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/010-routing-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/011-compliance-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-1/012-idempotency-table.yaml
+  - include:
+      file: db/changelog/changes/stage-1/013-security-cooldowns.yaml
+  - include:
+      file: db/changelog/changes/stage-1/014-card-status-inactive.yaml
+
+  # Stage 2 — merchant / C2B / settlement (enabled separately)
+  - include:
+      file: db/changelog/changes/stage-2/101-merchant-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-2/102-qr-paymentlink-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-2/103-settlement-merchant.yaml
+
+  # Stage 3 — business / bank-rail / full reconciliation
+  - include:
+      file: db/changelog/changes/stage-3/201-business-tables.yaml
+  - include:
+      file: db/changelog/changes/stage-3/202-settlement-network.yaml
+
+  # Seed data
+  - include:
+      file: db/changelog/changes/seed/s01-payment-networks.yaml
+  - include:
+      file: db/changelog/changes/seed/s02-banks.yaml
+  - include:
+      file: db/changelog/changes/seed/s03-transfer-types.yaml
+  - include:
+      file: db/changelog/changes/seed/s04-purpose-codes.yaml
+  - include:
+      file: db/changelog/changes/seed/s05-lookup-tables.yaml
+  - include:
+      file: db/changelog/changes/seed/s06-ledger-accounts.yaml
+  - include:
+      file: db/changelog/changes/seed/s07-regulatory-params.yaml

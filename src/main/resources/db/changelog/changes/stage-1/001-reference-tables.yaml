@@ -1,0 +1,206 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-payment-networks
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: payment_networks
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(10)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: legal_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tin
+                  type: VARCHAR(20)
+              - column:
+                  name: settlement_system
+                  type: VARCHAR(20)
+                  defaultValue: munis
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 001-banks
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: banks
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: mfo_code
+                  type: VARCHAR(5)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tin
+                  type: VARCHAR(20)
+              - column:
+                  name: role_issuer
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role_acquirer
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role_settlement
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 001-transfer-types
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transfer_types
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(10)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: name_uz
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requires_kyc
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requires_kyb
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: allowed_sender_party_types
+                  type: TEXT[]
+              - column:
+                  name: allowed_recipient_party_types
+                  type: TEXT[]
+              - column:
+                  name: launch_stage
+                  type: SMALLINT
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 001-purpose-codes
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(30)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: name_uz
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: applicable_transfer_type_id
+                  type: INT
+              - column:
+                  name: is_regulatory_required
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: purpose_codes
+            baseColumnNames: applicable_transfer_type_id
+            referencedTableName: transfer_types
+            referencedColumnNames: id
+            constraintName: fk_purpose_codes_transfer_type

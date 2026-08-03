@@ -1,0 +1,229 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-limit-rules
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: limit_rules
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kyc_tier
+                  type: VARCHAR(20)
+              - column:
+                  name: max_amount
+                  type: BIGINT
+              - column:
+                  name: max_count
+                  type: INT
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_from
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_to
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: limit_category
+                  type: VARCHAR(25)
+                  defaultValue: our_platform_limit
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_type
+                  type: VARCHAR(15)
+                  defaultValue: person
+                  constraints:
+                    nullable: false
+              - column:
+                  name: transfer_type_id
+                  type: INT
+              - column:
+                  name: network_code
+                  type: VARCHAR(10)
+        - addForeignKeyConstraint:
+            baseTableName: limit_rules
+            baseColumnNames: transfer_type_id
+            referencedTableName: transfer_types
+            referencedColumnNames: id
+            constraintName: fk_limit_rules_transfer_type
+        - sql:
+            sql: ALTER TABLE limit_rules ADD CONSTRAINT chk_limit_rules_scope CHECK (scope IN ('per_transaction','daily_amount','monthly_amount','daily_count','monthly_count'));
+        - sql:
+            sql: ALTER TABLE limit_rules ADD CONSTRAINT chk_limit_rules_category CHECK (limit_category IN ('regulatory_limit','network_limit','bank_limit','payment_organization_limit','merchant_limit','business_limit','our_platform_limit','risk_limit'));
+        - sql:
+            sql: ALTER TABLE limit_rules ADD CONSTRAINT chk_limit_rules_actor CHECK (actor_type IN ('person','business','merchant'));
+        - sql:
+            sql: ALTER TABLE limit_rules ADD CONSTRAINT chk_limit_rules_network CHECK (network_code IN ('uzcard','humo') OR network_code IS NULL);
+
+  - changeSet:
+      id: 009-user-limit-overrides
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: user_limit_overrides
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: limit_rule_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: override_max_amount
+                  type: BIGINT
+              - column:
+                  name: override_max_count
+                  type: INT
+              - column:
+                  name: reason
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by_admin_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: user_limit_overrides
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_ulo_user
+        - addForeignKeyConstraint:
+            baseTableName: user_limit_overrides
+            baseColumnNames: limit_rule_id
+            referencedTableName: limit_rules
+            referencedColumnNames: id
+            constraintName: fk_ulo_limit_rule
+        - addForeignKeyConstraint:
+            baseTableName: user_limit_overrides
+            baseColumnNames: created_by_admin_id
+            referencedTableName: admins
+            referencedColumnNames: id
+            constraintName: fk_ulo_admin
+
+  - changeSet:
+      id: 009-limit-usage-counters
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: limit_usage_counters
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: limit_rule_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_start
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_end
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: used_amount
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: used_count
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: limit_usage_counters
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_luc_user
+        - addForeignKeyConstraint:
+            baseTableName: limit_usage_counters
+            baseColumnNames: limit_rule_id
+            referencedTableName: limit_rules
+            referencedColumnNames: id
+            constraintName: fk_luc_limit_rule
+        - addUniqueConstraint:
+            tableName: limit_usage_counters
+            columnNames: user_id, limit_rule_id, period_start
+            constraintName: uq_luc_user_rule_period

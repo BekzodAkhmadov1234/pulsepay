@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: s01-payment-networks
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: payment_networks
+            columns:
+              - column:
+                  name: code
+                  value: uzcard
+              - column:
+                  name: legal_name
+                  value: JSC "Common Republican Processing Centre"
+              - column:
+                  name: settlement_system
+                  value: munis
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: payment_networks
+            columns:
+              - column:
+                  name: code
+                  value: humo
+              - column:
+                  name: legal_name
+                  value: National Interbank Processing Center
+              - column:
+                  name: settlement_system
+                  value: munis
+              - column:
+                  name: is_active
+                  valueBoolean: true

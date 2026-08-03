@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-card-status-fix-constraint
+      author: pulsepay
+      comment: >
+        Phase 2 — add INACTIVE card status (security-event deactivation).
+        Also aligns the check constraint to uppercase to match JPA @Enumerated(EnumType.STRING) behaviour.
+      changes:
+        - sql:
+            sql: ALTER TABLE cards DROP CONSTRAINT IF EXISTS chk_cards_status;
+        - sql:
+            sql: ALTER TABLE cards ALTER COLUMN status SET DEFAULT 'UNVERIFIED';
+        - sql:
+            sql: ALTER TABLE cards ADD CONSTRAINT chk_cards_status CHECK (status IN ('UNVERIFIED','VERIFIED','INACTIVE','EXPIRED','BLOCKED'));

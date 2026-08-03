@@ -1,0 +1,112 @@
+databaseChangeLog:
+  - changeSet:
+      id: 102-qr-codes
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: qr_codes
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: merchant_account_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: qr_type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: BIGINT
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: qr_codes
+            baseColumnNames: id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_qr_codes_instruments
+        - addForeignKeyConstraint:
+            baseTableName: qr_codes
+            baseColumnNames: merchant_account_id
+            referencedTableName: merchant_accounts
+            referencedColumnNames: id
+            constraintName: fk_qr_codes_merchant_account
+        - sql:
+            sql: ALTER TABLE qr_codes ADD CONSTRAINT chk_qr_type CHECK (qr_type IN ('static','dynamic'));
+
+  - changeSet:
+      id: 102-payment-links
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: payment_links
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: merchant_account_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: BIGINT
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(12)
+                  defaultValue: active
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: payment_links
+            baseColumnNames: id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_payment_links_instruments
+        - addForeignKeyConstraint:
+            baseTableName: payment_links
+            baseColumnNames: merchant_account_id
+            referencedTableName: merchant_accounts
+            referencedColumnNames: id
+            constraintName: fk_payment_links_merchant_account
+        - sql:
+            sql: ALTER TABLE payment_links ADD CONSTRAINT chk_pl_status CHECK (status IN ('active','expired','used','canceled'));

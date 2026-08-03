@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-security-cooldowns
+      author: pulsepay
+      comment: >
+        Security cooldowns — backs OTP lockouts (3 failed attempts → 15-minute lockout per REG-03),
+        transfer restrictions triggered by security events (new device, password change per Phase 2),
+        and account restrictions. One row per active cooldown; expired rows are logically inactive.
+      changes:
+        - createTable:
+            tableName: security_cooldowns
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cooldown_type
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_until
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: security_cooldowns
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_security_cooldowns_user
+        - sql:
+            sql: >
+              ALTER TABLE security_cooldowns ADD CONSTRAINT chk_cooldown_type
+              CHECK (cooldown_type IN ('otp_lockout','transfer_restriction','login_restriction','card_reactivation_pending'));
+        - createIndex:
+            tableName: security_cooldowns
+            indexName: idx_security_cooldowns_user_type_until
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: cooldown_type
+              - column:
+                  name: locked_until

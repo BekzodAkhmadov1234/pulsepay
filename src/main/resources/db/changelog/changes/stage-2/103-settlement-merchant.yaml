@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 103-settlement-batches
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: settlement_batches
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: batch_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_network_id
+                  type: INT
+              - column:
+                  name: merchant_account_id
+                  type: UUID
+              - column:
+                  name: operational_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_amount
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(15)
+                  defaultValue: open
+                  constraints:
+                    nullable: false
+              - column:
+                  name: generated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settled_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: settlement_batches
+            baseColumnNames: payment_network_id
+            referencedTableName: payment_networks
+            referencedColumnNames: id
+            constraintName: fk_sb_payment_network
+        - addForeignKeyConstraint:
+            baseTableName: settlement_batches
+            baseColumnNames: merchant_account_id
+            referencedTableName: merchant_accounts
+            referencedColumnNames: id
+            constraintName: fk_sb_merchant_account
+        - sql:
+            sql: ALTER TABLE settlement_batches ADD CONSTRAINT chk_sb_type CHECK (batch_type IN ('network_clearing','merchant_settlement'));
+        - sql:
+            sql: ALTER TABLE settlement_batches ADD CONSTRAINT chk_sb_status CHECK (status IN ('open','submitted','settled','failed'));
+
+  - changeSet:
+      id: 103-transactions-settlement-fk
+      author: pulsepay
+      comment: Wire settlement_batch_id FK now that settlement_batches table exists
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: settlement_batch_id
+            referencedTableName: settlement_batches
+            referencedColumnNames: id
+            constraintName: fk_transactions_settlement_batch

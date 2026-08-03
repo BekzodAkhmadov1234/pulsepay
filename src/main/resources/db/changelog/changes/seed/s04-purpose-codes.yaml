@@ -1,0 +1,294 @@
+databaseChangeLog:
+  - changeSet:
+      id: s04-purpose-codes
+      author: pulsepay
+      comment: 16 mandatory P2P purpose codes per Central Bank letter 17 Feb 2026
+      changes:
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: goods_payment
+              - column:
+                  name: name_uz
+                  value: Payment for goods
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: services_payment
+              - column:
+                  name: name_uz
+                  value: Payment for services
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: debt_repayment
+              - column:
+                  name: name_uz
+                  value: Debt repayment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: family_transfer
+              - column:
+                  name: name_uz
+                  value: Family transfer / financial support
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: charity
+              - column:
+                  name: name_uz
+                  value: Charitable donation
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: gratuity
+              - column:
+                  name: name_uz
+                  value: Gratuity / tip
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: rent_payment
+              - column:
+                  name: name_uz
+                  value: Rent payment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: education_payment
+              - column:
+                  name: name_uz
+                  value: Education fee payment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: medical_payment
+              - column:
+                  name: name_uz
+                  value: Medical / healthcare payment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: utility_payment
+              - column:
+                  name: name_uz
+                  value: Utility payment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: transport_payment
+              - column:
+                  name: name_uz
+                  value: Transport / travel payment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: salary_advance
+              - column:
+                  name: name_uz
+                  value: Salary advance / wage payment
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: investment
+              - column:
+                  name: name_uz
+                  value: Investment / capital contribution
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: refund
+              - column:
+                  name: name_uz
+                  value: Refund / return of funds
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: gift
+              - column:
+                  name: name_uz
+                  value: Gift / personal transfer
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: purpose_codes
+            columns:
+              - column:
+                  name: code
+                  value: other
+              - column:
+                  name: name_uz
+                  value: Other purpose
+              - column:
+                  name: applicable_transfer_type_id
+                  valueNumeric: 1
+              - column:
+                  name: is_regulatory_required
+                  valueBoolean: true
+              - column:
+                  name: is_active
+                  valueBoolean: true

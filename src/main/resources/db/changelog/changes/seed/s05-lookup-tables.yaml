@@ -1,0 +1,161 @@
+databaseChangeLog:
+  - changeSet:
+      id: s05-transaction-types
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transaction_types
+            columns:
+              - column:
+                  name: code
+                  value: debit_leg
+        - insert:
+            tableName: transaction_types
+            columns:
+              - column:
+                  name: code
+                  value: credit_leg
+        - insert:
+            tableName: transaction_types
+            columns:
+              - column:
+                  name: code
+                  value: reversal
+
+  - changeSet:
+      id: s05-account-types
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: account_types
+            columns:
+              - column:
+                  name: name
+                  value: asset
+              - column:
+                  name: normal_balance
+                  value: debit
+        - insert:
+            tableName: account_types
+            columns:
+              - column:
+                  name: name
+                  value: liability
+              - column:
+                  name: normal_balance
+                  value: credit
+        - insert:
+            tableName: account_types
+            columns:
+              - column:
+                  name: name
+                  value: revenue
+              - column:
+                  name: normal_balance
+                  value: credit
+
+  - changeSet:
+      id: s05-entry-types
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: entry_types
+            columns:
+              - column:
+                  name: code
+                  value: transfer
+              - column:
+                  name: description
+                  value: Standard card-to-card transfer
+        - insert:
+            tableName: entry_types
+            columns:
+              - column:
+                  name: code
+                  value: fee
+              - column:
+                  name: description
+                  value: Platform commission / interchange fee
+        - insert:
+            tableName: entry_types
+            columns:
+              - column:
+                  name: code
+                  value: reversal
+              - column:
+                  name: description
+                  value: Reversal of a previously posted transfer
+        - insert:
+            tableName: entry_types
+            columns:
+              - column:
+                  name: code
+                  value: adjustment
+              - column:
+                  name: description
+                  value: Manual reconciliation adjustment
+
+  - changeSet:
+      id: s05-transaction-failure-reasons
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transaction_failure_reasons
+            columns:
+              - column:
+                  name: network_code
+                  value: "51"
+              - column:
+                  name: normalized_reason
+                  value: insufficient_funds
+              - column:
+                  name: user_message_key
+                  value: error.card.insufficient_funds
+        - insert:
+            tableName: transaction_failure_reasons
+            columns:
+              - column:
+                  name: network_code
+                  value: "05"
+              - column:
+                  name: normalized_reason
+                  value: card_blocked
+              - column:
+                  name: user_message_key
+                  value: error.card.blocked
+        - insert:
+            tableName: transaction_failure_reasons
+            columns:
+              - column:
+                  name: network_code
+                  value: "61"
+              - column:
+                  name: normalized_reason
+                  value: limit_exceeded
+              - column:
+                  name: user_message_key
+                  value: error.card.limit_exceeded
+        - insert:
+            tableName: transaction_failure_reasons
+            columns:
+              - column:
+                  name: network_code
+                  value: "96"
+              - column:
+                  name: normalized_reason
+                  value: network_timeout
+              - column:
+                  name: user_message_key
+                  value: error.network.timeout
+        - insert:
+            tableName: transaction_failure_reasons
+            columns:
+              - column:
+                  name: network_code
+                  value: "14"
+              - column:
+                  name: normalized_reason
+                  value: invalid_card
+              - column:
+                  name: user_message_key
+                  value: error.card.invalid

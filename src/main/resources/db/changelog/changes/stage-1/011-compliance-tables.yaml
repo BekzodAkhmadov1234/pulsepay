@@ -1,0 +1,144 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-regulatory-parameters
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: regulatory_parameters
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: value_amount
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unit
+                  type: VARCHAR(10)
+                  defaultValue: uzs
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_from
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_to
+                  type: TIMESTAMPTZ
+              - column:
+                  name: source_reference
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE regulatory_parameters ADD CONSTRAINT chk_rp_unit CHECK (unit IN ('uzs','bcv'));
+        - createIndex:
+            tableName: regulatory_parameters
+            indexName: idx_regulatory_parameters_code
+            columns:
+              - column:
+                  name: code
+
+  - changeSet:
+      id: 011-compliance-flags
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: compliance_flags
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transfer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: party_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: flag_type
+                  type: VARCHAR(25)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: regulatory_parameter_id
+                  type: UUID
+              - column:
+                  name: status
+                  type: VARCHAR(15)
+                  defaultValue: open
+                  constraints:
+                    nullable: false
+              - column:
+                  name: detected_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: resolved_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: resolved_by_admin_id
+                  type: UUID
+              - column:
+                  name: notes
+                  type: TEXT
+        - addForeignKeyConstraint:
+            baseTableName: compliance_flags
+            baseColumnNames: transfer_id
+            referencedTableName: transfers
+            referencedColumnNames: id
+            constraintName: fk_cf_transfer
+        - addForeignKeyConstraint:
+            baseTableName: compliance_flags
+            baseColumnNames: party_id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_cf_party
+        - addForeignKeyConstraint:
+            baseTableName: compliance_flags
+            baseColumnNames: regulatory_parameter_id
+            referencedTableName: regulatory_parameters
+            referencedColumnNames: id
+            constraintName: fk_cf_regulatory_parameter
+        - addForeignKeyConstraint:
+            baseTableName: compliance_flags
+            baseColumnNames: resolved_by_admin_id
+            referencedTableName: admins
+            referencedColumnNames: id
+            constraintName: fk_cf_resolved_by
+        - sql:
+            sql: ALTER TABLE compliance_flags ADD CONSTRAINT chk_cf_flag_type CHECK (flag_type IN ('large_transaction','aggregated_threshold','manual_review','sanctions_hit'));
+        - sql:
+            sql: ALTER TABLE compliance_flags ADD CONSTRAINT chk_cf_status CHECK (status IN ('open','under_review','reported','dismissed'));

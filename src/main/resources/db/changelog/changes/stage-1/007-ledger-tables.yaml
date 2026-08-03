@@ -1,0 +1,258 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-account-types
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: account_types
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(20)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: normal_balance
+                  type: VARCHAR(6)
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE account_types ADD CONSTRAINT chk_account_types_balance CHECK (normal_balance IN ('debit','credit'));
+
+  - changeSet:
+      id: 007-entry-types
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: entry_types
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(20)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
+
+  - changeSet:
+      id: 007-ledger-accounts
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: ledger_accounts
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: account_type_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: normal_balance
+                  type: VARCHAR(6)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(30)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: posted_balance
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lock_version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(12)
+                  defaultValue: open
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: ledger_accounts
+            baseColumnNames: account_type_id
+            referencedTableName: account_types
+            referencedColumnNames: id
+            constraintName: fk_ledger_accounts_type
+        - sql:
+            sql: ALTER TABLE ledger_accounts ADD CONSTRAINT chk_ledger_accounts_balance CHECK (normal_balance IN ('debit','credit'));
+        - sql:
+            sql: ALTER TABLE ledger_accounts ADD CONSTRAINT chk_ledger_accounts_status CHECK (status IN ('open','closed'));
+
+  - changeSet:
+      id: 007-ledger-transactions
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: ledger_transactions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transfer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(10)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: external_id
+                  type: VARCHAR(64)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: entry_type_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: posted_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: reverses_txn_id
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: ledger_transactions
+            baseColumnNames: transfer_id
+            referencedTableName: transfers
+            referencedColumnNames: id
+            constraintName: fk_ledger_txns_transfer
+        - addForeignKeyConstraint:
+            baseTableName: ledger_transactions
+            baseColumnNames: entry_type_id
+            referencedTableName: entry_types
+            referencedColumnNames: id
+            constraintName: fk_ledger_txns_entry_type
+        - addForeignKeyConstraint:
+            baseTableName: ledger_transactions
+            baseColumnNames: reverses_txn_id
+            referencedTableName: ledger_transactions
+            referencedColumnNames: id
+            constraintName: fk_ledger_txns_reverses
+        - sql:
+            sql: ALTER TABLE ledger_transactions ADD CONSTRAINT chk_ledger_txns_status CHECK (status IN ('pending','posted','archived'));
+
+  - changeSet:
+      id: 007-ledger-entries
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: ledger_entries
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: ledger_transaction_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ledger_account_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: direction
+                  type: VARCHAR(6)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(10)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: ledger_entries
+            baseColumnNames: ledger_transaction_id
+            referencedTableName: ledger_transactions
+            referencedColumnNames: id
+            constraintName: fk_ledger_entries_txn
+        - addForeignKeyConstraint:
+            baseTableName: ledger_entries
+            baseColumnNames: ledger_account_id
+            referencedTableName: ledger_accounts
+            referencedColumnNames: id
+            constraintName: fk_ledger_entries_account
+        - sql:
+            sql: ALTER TABLE ledger_entries ADD CONSTRAINT chk_ledger_entries_direction CHECK (direction IN ('debit','credit'));
+        - sql:
+            sql: ALTER TABLE ledger_entries ADD CONSTRAINT chk_ledger_entries_amount CHECK (amount > 0);

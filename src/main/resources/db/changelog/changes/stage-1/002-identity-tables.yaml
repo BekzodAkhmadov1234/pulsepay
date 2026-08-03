@@ -1,0 +1,336 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-admins
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: admins
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: password_hash
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(15)
+                  defaultValue: active
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_login_at
+                  type: TIMESTAMPTZ
+        - sql:
+            sql: ALTER TABLE admins ADD CONSTRAINT chk_admins_role CHECK (role IN ('support','compliance','finance','risk','super_admin'));
+        - sql:
+            sql: ALTER TABLE admins ADD CONSTRAINT chk_admins_status CHECK (status IN ('active','suspended'));
+
+  - changeSet:
+      id: 002-users
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: phone_e164
+                  type: VARCHAR(16)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: TEXT
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kyc_level
+                  type: VARCHAR(20)
+                  defaultValue: basic
+                  constraints:
+                    nullable: false
+              - column:
+                  name: biometric_verified_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: closed_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT chk_users_status CHECK (status IN ('pending','active','suspended','closed'));
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT chk_users_kyc_level CHECK (kyc_level IN ('basic','verified','premium'));
+
+  - changeSet:
+      id: 002-devices
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: devices
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: device_fingerprint
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: platform
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: push_token
+                  type: TEXT
+              - column:
+                  name: first_seen_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_seen_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trusted
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: devices
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_devices_user
+        - sql:
+            sql: ALTER TABLE devices ADD CONSTRAINT chk_devices_platform CHECK (platform IN ('ios','android'));
+
+  - changeSet:
+      id: 002-sessions
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: sessions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: device_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ip_address
+                  type: INET
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: sessions
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_sessions_user
+        - addForeignKeyConstraint:
+            baseTableName: sessions
+            baseColumnNames: device_id
+            referencedTableName: devices
+            referencedColumnNames: id
+            constraintName: fk_sessions_device
+
+  - changeSet:
+      id: 002-refresh-tokens
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: refresh_tokens
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_refresh_tokens_user
+        - addForeignKeyConstraint:
+            baseTableName: refresh_tokens
+            baseColumnNames: session_id
+            referencedTableName: sessions
+            referencedColumnNames: id
+            constraintName: fk_refresh_tokens_session
+
+  - changeSet:
+      id: 002-otp-codes
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: otp_codes
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purpose
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code_hash
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_id
+                  type: UUID
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consumed_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: attempt_count
+                  type: SMALLINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: otp_codes
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_otp_codes_user
+        - sql:
+            sql: ALTER TABLE otp_codes ADD CONSTRAINT chk_otp_purpose CHECK (purpose IN ('login','transfer','card_add'));

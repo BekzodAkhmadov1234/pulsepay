@@ -1,0 +1,334 @@
+databaseChangeLog:
+  - changeSet:
+      id: 201-businesses
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: businesses
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: legal_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: business_type
+                  type: VARCHAR(25)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: registration_number
+                  type: VARCHAR(30)
+              - column:
+                  name: tin
+                  type: VARCHAR(20)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: kyb_status
+                  type: VARCHAR(15)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(15)
+                  defaultValue: pending
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: businesses
+            baseColumnNames: id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_businesses_parties
+        - sql:
+            sql: ALTER TABLE businesses ADD CONSTRAINT chk_businesses_type CHECK (business_type IN ('llc','jsc','individual_entrepreneur','other'));
+        - sql:
+            sql: ALTER TABLE businesses ADD CONSTRAINT chk_businesses_kyb CHECK (kyb_status IN ('pending','verified','rejected'));
+        - sql:
+            sql: ALTER TABLE businesses ADD CONSTRAINT chk_businesses_status CHECK (status IN ('pending','active','suspended','closed'));
+
+  - changeSet:
+      id: 201-merchants-business-fk
+      author: pulsepay
+      comment: Wire merchants.business_id FK now that businesses table exists
+      changes:
+        - addColumn:
+            tableName: merchants
+            columns:
+              - column:
+                  name: business_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: merchants
+            baseColumnNames: business_id
+            referencedTableName: businesses
+            referencedColumnNames: id
+            constraintName: fk_merchants_business
+
+  - changeSet:
+      id: 201-bank-accounts
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: bank_accounts
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: account_number
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: bank_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: mfo_code
+                  type: VARCHAR(5)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tin_snapshot
+                  type: VARCHAR(20)
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(12)
+                  defaultValue: unverified
+                  constraints:
+                    nullable: false
+              - column:
+                  name: verified_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: bank_accounts
+            baseColumnNames: id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_bank_accounts_instruments
+        - addForeignKeyConstraint:
+            baseTableName: bank_accounts
+            baseColumnNames: bank_id
+            referencedTableName: banks
+            referencedColumnNames: id
+            constraintName: fk_bank_accounts_bank
+        - sql:
+            sql: ALTER TABLE bank_accounts ADD CONSTRAINT chk_ba_status CHECK (status IN ('unverified','verified','closed'));
+
+  - changeSet:
+      id: 201-merchant-accounts-settlement-bank-fk
+      author: pulsepay
+      comment: Wire merchant_accounts.settlement_bank_account_id FK now that bank_accounts exists
+      changes:
+        - addColumn:
+            tableName: merchant_accounts
+            columns:
+              - column:
+                  name: settlement_bank_account_id
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: merchant_accounts
+            baseColumnNames: settlement_bank_account_id
+            referencedTableName: bank_accounts
+            referencedColumnNames: id
+            constraintName: fk_ma_settlement_bank_account
+
+  - changeSet:
+      id: 201-business-users
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: business_users
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: business_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  defaultValue: viewer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_authorized_signatory
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: business_users
+            baseColumnNames: business_id
+            referencedTableName: businesses
+            referencedColumnNames: id
+            constraintName: fk_business_users_business
+        - addForeignKeyConstraint:
+            baseTableName: business_users
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_business_users_user
+        - sql:
+            sql: ALTER TABLE business_users ADD CONSTRAINT chk_bu_role CHECK (role IN ('owner','accountant','approver','viewer'));
+
+  - changeSet:
+      id: 201-business-documents
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: business_documents
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: business_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: document_type
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_reference
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: uploaded_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: verified_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: verified_by_admin_id
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: business_documents
+            baseColumnNames: business_id
+            referencedTableName: businesses
+            referencedColumnNames: id
+            constraintName: fk_bd_business
+        - addForeignKeyConstraint:
+            baseTableName: business_documents
+            baseColumnNames: verified_by_admin_id
+            referencedTableName: admins
+            referencedColumnNames: id
+            constraintName: fk_bd_verified_by
+
+  - changeSet:
+      id: 201-beneficiaries
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: beneficiaries
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: party_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: instrument_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: TEXT
+              - column:
+                  name: last_used_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: beneficiaries
+            baseColumnNames: party_id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_beneficiaries_party
+        - addForeignKeyConstraint:
+            baseTableName: beneficiaries
+            baseColumnNames: instrument_id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_beneficiaries_instrument

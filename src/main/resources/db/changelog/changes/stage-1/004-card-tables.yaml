@@ -1,0 +1,147 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-cards
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: cards
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: card_token
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: masked_pan
+                  type: VARCHAR(19)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: card_network
+                  type: VARCHAR(10)
+              - column:
+                  name: payment_network_id
+                  type: INT
+              - column:
+                  name: issuer_bank_id
+                  type: UUID
+              - column:
+                  name: card_holder_name
+                  type: TEXT
+              - column:
+                  name: exp_month
+                  type: SMALLINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: exp_year
+                  type: SMALLINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(12)
+                  defaultValue: unverified
+                  constraints:
+                    nullable: false
+              - column:
+                  name: verified_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: is_default
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_special_card_account
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sca_purpose
+                  type: VARCHAR(30)
+        - addForeignKeyConstraint:
+            baseTableName: cards
+            baseColumnNames: id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_cards_instruments
+        - addForeignKeyConstraint:
+            baseTableName: cards
+            baseColumnNames: payment_network_id
+            referencedTableName: payment_networks
+            referencedColumnNames: id
+            constraintName: fk_cards_payment_network
+        - addForeignKeyConstraint:
+            baseTableName: cards
+            baseColumnNames: issuer_bank_id
+            referencedTableName: banks
+            referencedColumnNames: id
+            constraintName: fk_cards_issuer_bank
+        - sql:
+            sql: ALTER TABLE cards ADD CONSTRAINT chk_cards_network CHECK (card_network IN ('uzcard','humo'));
+        - sql:
+            sql: ALTER TABLE cards ADD CONSTRAINT chk_cards_status CHECK (status IN ('unverified','verified','expired','blocked'));
+
+  - changeSet:
+      id: 004-saved-recipient-cards
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: saved_recipient_cards
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: owner_user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: masked_pan
+                  type: VARCHAR(19)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: card_token
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: card_network
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: TEXT
+              - column:
+                  name: last_used_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: saved_recipient_cards
+            baseColumnNames: owner_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_saved_recipient_cards_user
+        - sql:
+            sql: ALTER TABLE saved_recipient_cards ADD CONSTRAINT chk_src_network CHECK (card_network IN ('uzcard','humo'));

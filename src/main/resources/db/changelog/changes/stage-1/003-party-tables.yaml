@@ -1,0 +1,94 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-parties
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: parties
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: party_type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE parties ADD CONSTRAINT chk_parties_type CHECK (party_type IN ('person','business','merchant'));
+
+  - changeSet:
+      id: 003-users-fk-parties
+      author: pulsepay
+      comment: users.id is a FK to parties.id (class-table inheritance)
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: users
+            baseColumnNames: id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_users_parties
+
+  - changeSet:
+      id: 003-instruments
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: instruments
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: owner_party_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: instrument_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(15)
+                  defaultValue: active
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: removed_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: instruments
+            baseColumnNames: owner_party_id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_instruments_owner_party
+        - sql:
+            sql: ALTER TABLE instruments ADD CONSTRAINT chk_instruments_type CHECK (instrument_type IN ('card','bank_account','merchant_account','qr','payment_link'));
+        - sql:
+            sql: ALTER TABLE instruments ADD CONSTRAINT chk_instruments_status CHECK (status IN ('active','removed','blocked'));
+        - addUniqueConstraint:
+            tableName: instruments
+            columnNames: id, owner_party_id
+            constraintName: uq_instruments_id_owner

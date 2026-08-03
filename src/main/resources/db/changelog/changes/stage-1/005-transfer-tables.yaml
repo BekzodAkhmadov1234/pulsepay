@@ -1,0 +1,260 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-transfers
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transfers
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: amount
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fee_amount
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency_code
+                  type: CHAR(3)
+                  defaultValue: UZS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(16)
+                  defaultValue: initiated
+                  constraints:
+                    nullable: false
+              - column:
+                  name: idempotency_key
+                  type: VARCHAR(64)
+                  constraints:
+                    unique: true
+              - column:
+                  name: network_reference
+                  type: VARCHAR(64)
+              - column:
+                  name: applied_fee_rule_id
+                  type: UUID
+              - column:
+                  name: applied_route_id
+                  type: UUID
+              - column:
+                  name: transfer_type_id
+                  type: INT
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purpose_code_id
+                  type: INT
+              - column:
+                  name: channel
+                  type: VARCHAR(12)
+                  defaultValue: mobile_app
+                  constraints:
+                    nullable: false
+              - column:
+                  name: initiated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_at
+                  type: TIMESTAMPTZ
+        - sql:
+            sql: ALTER TABLE transfers ADD CONSTRAINT chk_transfers_amount CHECK (amount > 0);
+        - sql:
+            sql: ALTER TABLE transfers ADD CONSTRAINT chk_transfers_status CHECK (status IN ('initiated','otp_pending','processing','completed','failed','reversed'));
+        - sql:
+            sql: ALTER TABLE transfers ADD CONSTRAINT chk_transfers_channel CHECK (channel IN ('mobile_app','pos','e_pos','api','web'));
+        - addForeignKeyConstraint:
+            baseTableName: transfers
+            baseColumnNames: transfer_type_id
+            referencedTableName: transfer_types
+            referencedColumnNames: id
+            constraintName: fk_transfers_transfer_type
+        - addForeignKeyConstraint:
+            baseTableName: transfers
+            baseColumnNames: purpose_code_id
+            referencedTableName: purpose_codes
+            referencedColumnNames: id
+            constraintName: fk_transfers_purpose_code
+
+  - changeSet:
+      id: 005-transfer-participants
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transfer_participants
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transfer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: party_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: party_type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: instrument_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: instrument_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: transfer_participants
+            baseColumnNames: transfer_id
+            referencedTableName: transfers
+            referencedColumnNames: id
+            constraintName: fk_tp_transfer
+        - addForeignKeyConstraint:
+            baseTableName: transfer_participants
+            baseColumnNames: party_id
+            referencedTableName: parties
+            referencedColumnNames: id
+            constraintName: fk_tp_party
+        - addForeignKeyConstraint:
+            baseTableName: transfer_participants
+            baseColumnNames: instrument_id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_tp_instrument
+        - sql:
+            sql: ALTER TABLE transfer_participants ADD CONSTRAINT chk_tp_role CHECK (role IN ('sender','recipient'));
+        - sql:
+            sql: ALTER TABLE transfer_participants ADD CONSTRAINT chk_tp_party_type CHECK (party_type IN ('person','business','merchant'));
+        - sql:
+            sql: ALTER TABLE transfer_participants ADD CONSTRAINT chk_tp_instrument_type CHECK (instrument_type IN ('card','bank_account','merchant_account','qr','payment_link'));
+        - addUniqueConstraint:
+            tableName: transfer_participants
+            columnNames: transfer_id, role
+            constraintName: uq_tp_transfer_role
+        - sql:
+            sql: >
+              ALTER TABLE transfer_participants
+              ADD CONSTRAINT fk_tp_instrument_owner
+              FOREIGN KEY (instrument_id, party_id)
+              REFERENCES instruments (id, owner_party_id);
+
+  - changeSet:
+      id: 005-transfer-party-type-trigger
+      author: pulsepay
+      comment: Enforces allowed_sender/recipient_party_types from transfer_types
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE OR REPLACE FUNCTION check_transfer_participant_party_type()
+              RETURNS TRIGGER AS $$
+              DECLARE
+                v_allowed TEXT[];
+                v_transfer_type_id INT;
+              BEGIN
+                SELECT transfer_type_id INTO v_transfer_type_id
+                FROM transfers WHERE id = NEW.transfer_id;
+
+                IF NEW.role = 'sender' THEN
+                  SELECT allowed_sender_party_types INTO v_allowed
+                  FROM transfer_types WHERE id = v_transfer_type_id;
+                ELSE
+                  SELECT allowed_recipient_party_types INTO v_allowed
+                  FROM transfer_types WHERE id = v_transfer_type_id;
+                END IF;
+
+                IF v_allowed IS NOT NULL AND NOT (NEW.party_type = ANY(v_allowed)) THEN
+                  RAISE EXCEPTION 'party_type % not allowed for role % in this transfer type', NEW.party_type, NEW.role;
+                END IF;
+
+                RETURN NEW;
+              END;
+              $$ LANGUAGE plpgsql;
+        - sql:
+            sql: |
+              CREATE TRIGGER trg_tp_party_type_check
+              BEFORE INSERT ON transfer_participants
+              FOR EACH ROW EXECUTE FUNCTION check_transfer_participant_party_type();
+
+  - changeSet:
+      id: 005-transfer-status-history
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transfer_status_history
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transfer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: from_status
+                  type: VARCHAR(16)
+              - column:
+                  name: to_status
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: TEXT
+              - column:
+                  name: changed_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: transfer_status_history
+            baseColumnNames: transfer_id
+            referencedTableName: transfers
+            referencedColumnNames: id
+            constraintName: fk_tsh_transfer

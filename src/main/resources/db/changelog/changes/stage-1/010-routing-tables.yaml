@@ -1,0 +1,154 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-transfer-routes
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transfer_routes
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: route_code
+                  type: VARCHAR(40)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: source_network
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: destination_network
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processor_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_amount
+                  type: BIGINT
+              - column:
+                  name: priority
+                  type: INT
+                  defaultValueNumeric: 100
+                  constraints:
+                    nullable: false
+              - column:
+                  name: avg_processing_seconds
+                  type: INT
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: transfer_type_id
+                  type: INT
+              - column:
+                  name: source_bank_id
+                  type: UUID
+              - column:
+                  name: destination_bank_id
+                  type: UUID
+              - column:
+                  name: merchant_type
+                  type: VARCHAR(30)
+              - column:
+                  name: effective_from
+                  type: TIMESTAMPTZ
+              - column:
+                  name: effective_to
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: transfer_routes
+            baseColumnNames: transfer_type_id
+            referencedTableName: transfer_types
+            referencedColumnNames: id
+            constraintName: fk_routes_transfer_type
+        - addForeignKeyConstraint:
+            baseTableName: transfer_routes
+            baseColumnNames: source_bank_id
+            referencedTableName: banks
+            referencedColumnNames: id
+            constraintName: fk_routes_source_bank
+        - addForeignKeyConstraint:
+            baseTableName: transfer_routes
+            baseColumnNames: destination_bank_id
+            referencedTableName: banks
+            referencedColumnNames: id
+            constraintName: fk_routes_dest_bank
+        - sql:
+            sql: ALTER TABLE transfer_routes ADD CONSTRAINT chk_routes_src_network CHECK (source_network IN ('uzcard','humo'));
+        - sql:
+            sql: ALTER TABLE transfer_routes ADD CONSTRAINT chk_routes_dest_network CHECK (destination_network IN ('uzcard','humo'));
+
+  - changeSet:
+      id: 010-route-health-events
+      author: pulsepay
+      changes:
+        - createTable:
+            tableName: transfer_route_health_events
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transfer_route_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(12)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: failure_count_window
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: detected_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: resolved_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: transfer_route_health_events
+            baseColumnNames: transfer_route_id
+            referencedTableName: transfer_routes
+            referencedColumnNames: id
+            constraintName: fk_rhe_route
+        - sql:
+            sql: ALTER TABLE transfer_route_health_events ADD CONSTRAINT chk_rhe_status CHECK (status IN ('up','degraded','down'));

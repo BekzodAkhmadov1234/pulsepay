@@ -1,0 +1,92 @@
+databaseChangeLog:
+  - changeSet:
+      id: s06-ledger-accounts
+      author: pulsepay
+      comment: >
+        Stage 1 chart of accounts.
+        account_type_id: 1=asset, 2=liability, 3=revenue (per s05 seed).
+      changes:
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000001
+              - column:
+                  name: account_type_id
+                  valueNumeric: 1
+              - column:
+                  name: normal_balance
+                  value: debit
+              - column:
+                  name: code
+                  value: uzcard_clearing
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: status
+                  value: open
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000002
+              - column:
+                  name: account_type_id
+                  valueNumeric: 1
+              - column:
+                  name: normal_balance
+                  value: debit
+              - column:
+                  name: code
+                  value: humo_clearing
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: status
+                  value: open
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000003
+              - column:
+                  name: account_type_id
+                  valueNumeric: 3
+              - column:
+                  name: normal_balance
+                  value: credit
+              - column:
+                  name: code
+                  value: fee_revenue
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: status
+                  value: open
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000004
+              - column:
+                  name: account_type_id
+                  valueNumeric: 2
+              - column:
+                  name: normal_balance
+                  value: credit
+              - column:
+                  name: code
+                  value: suspense
+              - column:
+                  name: currency_code
+                  value: UZS
+              - column:
+                  name: status
+                  value: open

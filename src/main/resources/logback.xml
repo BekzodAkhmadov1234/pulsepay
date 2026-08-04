@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <property name="LOG_PATTERN"
+              value="[%d{yyyy-MM-dd HH:mm:ss}] [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- ── Console Appender ──────────────────────────────────────────────── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ── Rolling File Appender ────────────────────────────────────────── -->
+    <!-- Rolls daily OR at 10 MB, gzips archives, 30-day history, 3 GB cap  -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- ── Third-party noise reduction ─────────────────────────────────── -->
+    <logger name="org.hibernate.SQL"                      level="WARN"/>
+    <logger name="org.hibernate.orm"                      level="WARN"/>
+    <logger name="org.hibernate.type.descriptor.sql"      level="WARN"/>
+    <logger name="liquibase"                              level="INFO"/>
+    <logger name="com.zaxxer.hikari"                      level="INFO"/>
+    <logger name="org.springframework.security"           level="INFO"/>
+    <logger name="org.springframework.web"                level="INFO"/>
+    <logger name="io.swagger"                             level="WARN"/>
+    <logger name="org.springdoc"                          level="WARN"/>
+
+    <!-- ── Application loggers at DEBUG in dev — keep INFO default ──────── -->
+    <logger name="uz.pulsepay" level="INFO"/>
+
+    <!-- ── Root logger ──────────────────────────────────────────────────── -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

@@ -1,5 +1,6 @@
 package uz.pulsepay.transfer.application.usecase;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.pulsepay.compliance.domain.port.in.EvaluateComplianceFlagsPort;
@@ -23,6 +24,7 @@ import java.util.UUID;
  * OTP confirmation → network execution → ledger posting → compliance evaluation.
  * All within ONE @Transactional boundary (Risk #1).
  */
+@Slf4j
 @Service
 public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
 
@@ -57,6 +59,8 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
     @Override
     @Transactional
     public Transfer confirmOtp(UUID transferId, UUID userId, String otpCode) {
+        log.info("OTP confirmation requested: transferId={}, userId={}", transferId, userId);
+
         Transfer transfer = transferRepository.findById(transferId)
                 .orElseThrow(() -> new NotFoundException("Transfer not found"));
 
@@ -65,6 +69,7 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
 
         // Verify OTP
         otpDomainService.verifyCode(userId, otpCode, OtpPurpose.TRANSFER);
+        log.info("OTP verified for transfer={}, transitioning to PROCESSING", transferId);
 
         // Status → PROCESSING
         transfer = transferRepository.updateStatus(transferId, TransferStatus.PROCESSING, "OTP confirmed");
@@ -82,12 +87,14 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
 
         // Execute network transfer
         String routeCode = transfer.appliedRouteId() != null ? transfer.appliedRouteId().toString() : "default";
+        log.debug("Executing network transfer: transferId={}, route={}", transferId, routeCode);
         executeCardTransferPort.execute(
                 transferId,
                 sender.instrumentId(),
                 recipient.instrumentId(),
                 transfer.amount(),
                 routeCode);
+        log.debug("Network transfer executed: transferId={}", transferId);
 
         // Post ledger entries (Risk #1: same transaction)
         postLedgerEntriesPort.postTransferEntries(
@@ -96,6 +103,7 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
                 transfer.feeAmount(),
                 sender.instrumentType().name().toLowerCase(),
                 recipient.instrumentType().name().toLowerCase());
+        log.debug("Ledger entries posted: transferId={}, amount={}, fee={}", transferId, transfer.amount(), transfer.feeAmount());
 
         // Increment limit counters
         incrementLimitUsagePort.increment(userId, transfer.amount(), transfer.transferTypeId());
@@ -109,6 +117,7 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
                 UUID.randomUUID(), transferId,
                 TransferStatus.PROCESSING, TransferStatus.COMPLETED, "Network transfer successful", Instant.now()));
 
+        log.info("Transfer completed: id={}, amount={}", transferId, transfer.amount());
         return transfer;
     }
 }

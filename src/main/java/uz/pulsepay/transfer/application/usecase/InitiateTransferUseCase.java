@@ -1,5 +1,6 @@
 package uz.pulsepay.transfer.application.usecase;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.pulsepay.fee.domain.port.in.CalculateFeePort;
@@ -40,6 +41,7 @@ import java.util.UUID;
  *   6. Route resolution
  *   7. Persist transfer + participants + status history
  */
+@Slf4j
 @Service
 public class InitiateTransferUseCase implements InitiateTransferPort {
 
@@ -87,8 +89,12 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
                              Money amount, int transferTypeId, Integer purposeCodeId,
                              TransferChannel channel, String idempotencyKey) {
 
+        log.info("Initiating transfer: sender={}, amount={}, channel={}, idempotencyKey={}",
+                senderId, amount, channel, idempotencyKey);
+
         // 1. Idempotency guard (Risk #6: insert-first)
         idempotencyService.claimKey(idempotencyKey, senderId, idempotencyKey);
+        log.debug("Idempotency key claimed: {}", idempotencyKey);
 
         // 2. Validate sender
         User sender = userRepository.findById(senderId)
@@ -115,6 +121,7 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
 
         // 7. Limit check
         checkLimitPort.checkLimits(senderId, sender.kycLevel(), amount, transferTypeId);
+        log.debug("Limit check passed: sender={}, amount={}", senderId, amount);
 
         // 8. Fee calculation (senderCardNetwork / recipientCardNetwork are "uzcard" or "humo")
         String srcNetwork = senderCardNetwork;
@@ -122,9 +129,11 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
         var feeResult = calculateFeePort.calculate(amount, transferTypeId, srcNetwork, dstNetwork);
         Money feeAmount = feeResult.map(r -> r.fee()).orElse(Money.ofTiyin(0, CurrencyCode.UZS));
         UUID appliedFeeRuleId = feeResult.map(r -> r.appliedRule().id()).orElse(null);
+        log.debug("Fee calculated: fee={}, appliedRuleId={}, route={}->{}", feeAmount, appliedFeeRuleId, srcNetwork, dstNetwork);
 
         // 9. Route resolution
         TransferRoute route = resolveRoutePort.resolve(srcNetwork, dstNetwork, transferTypeId, amount);
+        log.debug("Route resolved: id={}", route.id());
 
         // 10. Persist transfer
         Transfer transfer = transferRepository.save(new Transfer(
@@ -148,6 +157,7 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
                 UUID.randomUUID(), transfer.id(), null,
                 TransferStatus.OTP_PENDING, "Transfer initiated", Instant.now()));
 
+        log.info("Transfer created: id={}, status=OTP_PENDING, amount={}, fee={}", transfer.id(), transfer.amount(), feeAmount);
         return transfer;
     }
 }

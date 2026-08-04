@@ -1,0 +1,21 @@
+{
+  "name": "pulsepay",
+  "version": "0.0.1",
+  "private": true,
+  "description": "PulsePay full-stack monorepo — Spring Boot backend + Vue 3 frontend",
+  "scripts": {
+    "dev": "concurrently --names CLIENT,SERVER --prefix-colors cyan,green \"npm run dev --prefix client\" \"echo 'No server dev script yet — add one in server/'\"",
+    "client:dev": "npm run dev --prefix client",
+    "client:build": "npm run build --prefix client",
+    "client:preview": "npm run preview --prefix client",
+    "client:lint": "npm run lint --prefix client",
+    "client:format": "npm run format --prefix client",
+    "client:test": "npm run test:unit --prefix client",
+    "client:type-check": "npm run type-check --prefix client",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "husky": "^9.1.7"
+  }
+}

@@ -38,3 +38,29 @@ out/
 
 ### Logs ###
 logs/
+
+### Node / npm — root, client/, server/ ###
+node_modules/
+client/node_modules/
+server/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+### Front-end build output ###
+client/dist/
+client/dist-ssr/
+client/coverage/
+*.local
+
+### Environment variables — never commit secrets ###
+.env
+.env.*
+!.env.example
+
+### OS junk ###
+.DS_Store
+Thumbs.db
+Desktop.ini

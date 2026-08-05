@@ -8,7 +8,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import uz.pulsepay.shared.domain.Money;
 import uz.pulsepay.transfer.adapter.in.rest.dto.ConfirmOtpRequest;
@@ -51,7 +52,11 @@ public class TransferController {
     @PostMapping
     public ResponseEntity<Transfer> initiate(
             @Valid @RequestBody InitiateTransferRequest request,
-            @AuthenticationPrincipal String userId) {
+            Authentication authentication) {
+        // JwtAuthenticationFilter stores the user UUID string in the authentication details.
+        // The principal is Spring Security's User (username = phoneE164); the UUID is in details.
+        UUID senderId = extractUserId(authentication);
+
         // Risk #8: parse via BigDecimal, convert to tiyin with longValueExact
         Money amount = Money.fromUzs(request.amountUzs());
         TransferChannel channel = request.channel() != null
@@ -59,7 +64,7 @@ public class TransferController {
                 : TransferChannel.MOBILE_APP;
 
         Transfer transfer = initiateTransferPort.initiate(
-                UUID.fromString(userId),
+                senderId,
                 request.senderInstrumentId(),
                 request.senderCardNetwork(),
                 request.recipientId(),
@@ -86,8 +91,8 @@ public class TransferController {
     public ResponseEntity<Transfer> confirmOtp(
             @Parameter(description = "Transfer UUID") @PathVariable UUID id,
             @Valid @RequestBody ConfirmOtpRequest request,
-            @AuthenticationPrincipal String userId) {
-        Transfer transfer = confirmTransferOtpPort.confirmOtp(id, UUID.fromString(userId), request.code());
+            Authentication authentication) {
+        Transfer transfer = confirmTransferOtpPort.confirmOtp(id, extractUserId(authentication), request.code());
         return ResponseEntity.ok(transfer);
     }
 
@@ -100,7 +105,20 @@ public class TransferController {
     @GetMapping("/{id}")
     public ResponseEntity<Transfer> getTransfer(
             @Parameter(description = "Transfer UUID") @PathVariable UUID id,
-            @AuthenticationPrincipal String userId) {
-        return ResponseEntity.ok(getTransferPort.getById(id, UUID.fromString(userId)));
+            Authentication authentication) {
+        return ResponseEntity.ok(getTransferPort.getById(id, extractUserId(authentication)));
+    }
+
+    /**
+     * Retrieves the authenticated user's UUID from the {@link Authentication} details slot.
+     *
+     * <p>{@link uz.pulsepay.infrastructure.security.JwtAuthenticationFilter} stores the user
+     * UUID string via {@link UsernamePasswordAuthenticationToken#setDetails(Object)} so that
+     * controllers can obtain it without an additional database lookup. The principal's username
+     * is the user's {@code phone_e164} — not the UUID — so we must read from details here.
+     */
+    private static UUID extractUserId(Authentication authentication) {
+        String userId = (String) ((UsernamePasswordAuthenticationToken) authentication).getDetails();
+        return UUID.fromString(userId);
     }
 }

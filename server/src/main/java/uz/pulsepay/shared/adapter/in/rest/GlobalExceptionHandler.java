@@ -3,9 +3,14 @@ package uz.pulsepay.shared.adapter.in.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import uz.pulsepay.identity.domain.exception.AccountInactiveException;
+import uz.pulsepay.identity.domain.exception.DuplicatePhoneException;
+import uz.pulsepay.identity.domain.exception.InvalidOtpException;
 import uz.pulsepay.shared.adapter.in.rest.dto.ErrorResponse;
 import uz.pulsepay.shared.exception.DomainException;
 import uz.pulsepay.shared.exception.IdempotencyConflictException;
@@ -17,6 +22,48 @@ import java.util.List;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // ── 401 Unauthorized — missing or invalid JWT ─────────────────────────────
+    // Spring Security throws AuthenticationException when no valid token is present.
+    // Returning 401 here gives API clients a structured JSON body instead of the
+    // default Spring Security plain-text response.
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        return build(HttpStatus.UNAUTHORIZED, "Authentication required: " + ex.getMessage());
+    }
+
+    // ── 403 Forbidden — authenticated but not permitted ───────────────────────
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        return build(HttpStatus.FORBIDDEN, "Access denied: " + ex.getMessage());
+    }
+
+    // ── 403 Forbidden — account is inactive or closed ────────────────────────
+    // Checked before the generic DomainException handler; Spring MVC picks the
+    // most specific matching handler automatically.
+
+    @ExceptionHandler(AccountInactiveException.class)
+    public ResponseEntity<ErrorResponse> handleAccountInactive(AccountInactiveException ex) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    // ── 409 Conflict — duplicate phone registration ───────────────────────────
+
+    @ExceptionHandler(DuplicatePhoneException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePhone(DuplicatePhoneException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // ── 400 Bad Request — invalid OTP (wrong code, expired, locked out) ──────
+    // Intentionally 400 rather than 422 to give the client a clear, actionable
+    // signal that the OTP itself is the problem, distinct from a business rule error.
+
+    @ExceptionHandler(InvalidOtpException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidOtp(InvalidOtpException ex) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
 
     // ── 404 Not Found ────────────────────────────────────────────────────────
 

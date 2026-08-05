@@ -5,6 +5,13 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
 
+    /* Path aliases — must match vite.config.ts resolve.alias */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "ignoreDeprecations": "6.0",
+
     /* Strict mode */
     "strict": true,
 

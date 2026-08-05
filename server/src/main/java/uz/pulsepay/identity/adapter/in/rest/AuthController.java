@@ -20,7 +20,7 @@ import uz.pulsepay.identity.domain.model.User;
 import uz.pulsepay.identity.domain.port.in.RequestOtpPort;
 import uz.pulsepay.identity.domain.port.in.VerifyOtpPort;
 import uz.pulsepay.identity.domain.port.out.UserRepository;
-import uz.pulsepay.infrastructure.security.JwtTokenProvider;
+import uz.pulsepay.infrastructure.security.JwtService;
 import uz.pulsepay.shared.exception.NotFoundException;
 
 @Tag(name = "Authentication", description = "OTP-based passwordless login for registered users")
@@ -31,16 +31,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final RequestOtpPort requestOtpPort;
     private final VerifyOtpPort verifyOtpPort;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtService jwtService;
 
     public AuthController(UserRepository userRepository,
                           RequestOtpPort requestOtpPort,
                           VerifyOtpPort verifyOtpPort,
-                          JwtTokenProvider jwtTokenProvider) {
+                          JwtService jwtService) {
         this.userRepository = userRepository;
         this.requestOtpPort = requestOtpPort;
-        this.verifyOtpPort = verifyOtpPort;
-        this.jwtTokenProvider = jwtTokenProvider;
+        this.verifyOtpPort  = verifyOtpPort;
+        this.jwtService     = jwtService;
     }
 
     @Operation(summary = "Request login OTP",
@@ -75,8 +75,10 @@ public class AuthController {
         VerifyOtpUseCase.VerifyOtpResult result = verifyOtpPort.verifyOtp(
                 user.id(), request.code(), OtpPurpose.LOGIN,
                 request.deviceFingerprint(), request.platform(), ip);
-        String accessToken = jwtTokenProvider.generateUserToken(user.id(), result.session().id());
-        // requiresBiometricStepUp is included in the response so the client can prompt AUTH-02
+        // generateUserToken(User) embeds phone_e164 and kyc_level claims so that
+        // JwtAuthenticationFilter can reconstruct the security context without a DB lookup.
+        String accessToken = jwtService.generateUserToken(user);
+        // requiresBiometricStepUp is included so the client can prompt AUTH-02
         return ResponseEntity.ok(AuthResponse.of(accessToken, "refresh-token-placeholder", 900,
                 result.requiresBiometricStepUp()));
     }

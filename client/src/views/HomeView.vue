@@ -1,40 +1,76 @@
 <script setup lang="ts">
-import { useCounterStore } from '@/stores/counter';
+import { useAuthStore } from '@/stores/auth';
+import { ArrowUpRight, ArrowDownLeft, Store, Activity } from '@lucide/vue';
 
-const counter = useCounterStore();
+const auth = useAuthStore();
+
+const stats = [
+  { label: 'Available balance', value: '— UZS', sub: 'Connect a card to fund your wallet' },
+  { label: 'Transfers this month', value: '0', sub: 'No transfers yet' },
+  { label: 'KYC level', value: auth.user?.kycLevel ?? '—', sub: 'Identity verification' },
+];
+
+const actions = [
+  { label: 'Send money', icon: ArrowUpRight },
+  { label: 'Receive', icon: ArrowDownLeft },
+  { label: 'Pay merchant', icon: Store },
+];
 </script>
 
 <template>
   <div class="space-y-8">
+    <!-- Welcome -->
     <section>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Welcome to PulsePay</h1>
-      <p class="mt-2 text-gray-500">Uzbekistan's P2P · C2B · B2B/B2C payment platform.</p>
+      <p class="text-sm text-muted-fg">Good day,</p>
+      <h1 class="mt-0.5 text-2xl font-bold text-foreground">
+        {{ auth.user?.fullName || auth.user?.phoneE164 || 'Dashboard' }}
+      </h1>
     </section>
 
-    <!-- Pinia counter demo -->
-    <section class="rounded-xl border border-gray-200 p-6 space-y-4 max-w-sm">
-      <h2 class="text-lg font-semibold text-gray-800">Pinia Counter Demo</h2>
-      <p class="text-4xl font-mono font-bold text-purple-600">{{ counter.count }}</p>
-      <p class="text-sm text-gray-500">Double: {{ counter.doubleCount }}</p>
-      <div class="flex gap-3">
+    <!-- Stats -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div
+        v-for="stat in stats"
+        :key="stat.label"
+        class="rounded-xl border border-border bg-white p-5 shadow-xs"
+      >
+        <p class="text-xs font-medium text-muted-fg">{{ stat.label }}</p>
+        <p class="mt-1 text-2xl font-bold tracking-tight text-foreground">{{ stat.value }}</p>
+        <p class="mt-0.5 text-xs text-muted-fg">{{ stat.sub }}</p>
+      </div>
+    </section>
+
+    <!-- Quick actions -->
+    <section>
+      <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-fg">
+        Quick actions
+      </h2>
+      <div class="grid grid-cols-3 gap-3">
         <button
-          class="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-          @click="counter.increment"
+          v-for="action in actions"
+          :key="action.label"
+          type="button"
+          class="flex flex-col items-center gap-2.5 rounded-xl border border-border bg-white p-5 text-center transition-colors hover:border-brand-200 hover:bg-brand-50"
         >
-          +
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50">
+            <component :is="action.icon" class="h-4 w-4 text-brand-600" />
+          </span>
+          <span class="text-xs font-medium text-foreground">{{ action.label }}</span>
         </button>
-        <button
-          class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors"
-          @click="counter.decrement"
-        >
-          −
-        </button>
-        <button
-          class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-          @click="counter.reset"
-        >
-          Reset
-        </button>
+      </div>
+    </section>
+
+    <!-- Activity -->
+    <section>
+      <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-fg">
+        Recent activity
+      </h2>
+      <div
+        class="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-14 text-center"
+      >
+        <Activity class="h-8 w-8 text-muted-fg/30" />
+        <p class="mt-3 text-sm font-medium text-foreground">No transactions yet</p>
+        <p class="mt-0.5 text-xs text-muted-fg">Your payment history will appear here.</p>
       </div>
     </section>
   </div>

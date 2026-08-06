@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useTransfersStore } from '@/stores/transfers';
+import type { TransferDto } from '@/lib/api/transfers';
 
 const store = useTransfersStore();
 
@@ -32,6 +33,52 @@ function formatDate(iso: string | null) {
     minute: '2-digit',
   });
 }
+
+function parseTxDate(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function txDayKey(tx: TransferDto): string {
+  const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
+  if (!d) return 'unknown';
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function txDayLabel(tx: TransferDto): string {
+  const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
+  if (!d) return 'Other';
+  const today = new Date();
+  if (isSameDay(d, today)) return 'Today';
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameDay(d, yesterday)) return 'Yesterday';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+}
+
+const groupedTransfers = computed(() => {
+  const groups: { label: string; items: TransferDto[] }[] = [];
+  const seen = new Map<string, { label: string; items: TransferDto[] }>();
+  for (const tx of store.transfers) {
+    const key = txDayKey(tx);
+    if (!seen.has(key)) {
+      const g = { label: txDayLabel(tx), items: [] as TransferDto[] };
+      groups.push(g);
+      seen.set(key, g);
+    }
+    seen.get(key)!.items.push(tx);
+  }
+  return groups;
+});
 </script>
 
 <template>
@@ -77,40 +124,47 @@ function formatDate(iso: string | null) {
       </q-card>
 
       <!-- Transfer list -->
-      <q-list v-else bordered separator rounded>
-        <q-item v-for="tx in store.transfers" :key="tx.id + (tx.direction ?? '')" class="q-py-md">
-          <q-item-section avatar>
-            <q-icon
-              :name="tx.direction === 'credit' ? 'arrow_downward' : 'arrow_upward'"
-              :color="tx.direction === 'credit' ? 'positive' : 'negative'"
-              size="24px"
-            />
-          </q-item-section>
+      <template v-else>
+        <template v-for="group in groupedTransfers" :key="group.label">
+          <p class="text-caption text-weight-medium text-grey-6 q-mt-md q-mb-sm">
+            {{ group.label }}
+          </p>
+          <q-list bordered separator rounded>
+            <q-item v-for="tx in group.items" :key="tx.id + (tx.direction ?? '')" class="q-py-md">
+              <q-item-section avatar>
+                <q-icon
+                  :name="tx.direction === 'credit' ? 'arrow_downward' : 'arrow_upward'"
+                  :color="tx.direction === 'credit' ? 'positive' : 'negative'"
+                  size="24px"
+                />
+              </q-item-section>
 
-          <q-item-section>
-            <q-item-label
-              class="text-weight-medium"
-              :class="tx.direction === 'credit' ? 'text-positive' : 'text-negative'"
-            >
-              {{ tx.direction === 'credit' ? '+' : '-' }}{{ formatAmount(tx.amountUzs) }}
-              <span
-                v-if="tx.direction !== 'credit' && tx.feeAmountUzs > 0"
-                class="text-caption text-grey-6 q-ml-xs"
-              >
-                + {{ formatAmount(tx.feeAmountUzs) }} fee
-              </span>
-            </q-item-label>
-            <q-item-label caption>
-              {{ (tx.direction === 'credit' ? tx.senderName : tx.recipientName) || '—' }}
-            </q-item-label>
-            <q-item-label caption>{{ formatDate(tx.initiatedAt) }}</q-item-label>
-          </q-item-section>
+              <q-item-section>
+                <q-item-label
+                  class="text-weight-medium"
+                  :class="tx.direction === 'credit' ? 'text-positive' : 'text-negative'"
+                >
+                  {{ tx.direction === 'credit' ? '+' : '-' }}{{ formatAmount(tx.amountUzs) }}
+                  <span
+                    v-if="tx.direction !== 'credit' && tx.feeAmountUzs > 0"
+                    class="text-caption text-grey-6 q-ml-xs"
+                  >
+                    + {{ formatAmount(tx.feeAmountUzs) }} fee
+                  </span>
+                </q-item-label>
+                <q-item-label caption>
+                  {{ (tx.direction === 'credit' ? tx.senderName : tx.recipientName) || '—' }}
+                </q-item-label>
+                <q-item-label caption>{{ formatDate(tx.initiatedAt) }}</q-item-label>
+              </q-item-section>
 
-          <q-item-section side>
-            <q-badge :color="statusColor(tx.status)" :label="tx.status" />
-          </q-item-section>
-        </q-item>
-      </q-list>
+              <q-item-section side>
+                <q-badge :color="statusColor(tx.status)" :label="tx.status" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </template>
+      </template>
     </div>
   </q-page>
 </template>

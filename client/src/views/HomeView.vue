@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
 import { useCardsStore } from '@/stores/cards';
 import { useTransfersStore } from '@/stores/transfers';
 import type { TransferDto } from '@/lib/api/transfers';
 
 const router = useRouter();
-const auth = useAuthStore();
 const cardsStore = useCardsStore();
 const transfersStore = useTransfersStore();
 
@@ -84,14 +82,6 @@ function statusColor(status: string) {
 <template>
   <q-page class="q-pa-lg">
     <div style="max-width: 1024px; margin: 0 auto">
-      <!-- Welcome -->
-      <div class="q-mb-lg">
-        <p class="text-body2 text-grey-6 q-mb-xs">Good day,</p>
-        <h1 class="text-h5 text-weight-bold q-my-none">
-          {{ auth.user?.fullName || auth.user?.phoneE164 || 'Dashboard' }}
-        </h1>
-      </div>
-
       <!-- Stats -->
       <div class="row q-col-gutter-md q-mb-xl">
         <div class="col-12 col-sm-4">

@@ -54,7 +54,9 @@ function handleLogout() {
         <q-space />
 
         <template v-if="auth.isAuthenticated">
-          <span class="text-body2 text-grey-6 q-mr-sm gt-sm">{{ auth.user?.phoneE164 }}</span>
+          <span class="text-body2 text-grey-6 q-mr-sm gt-sm">{{
+            auth.user?.fullName || auth.user?.phoneE164
+          }}</span>
           <q-btn flat dense no-caps icon="logout" label="Log out" @click="handleLogout" />
         </template>
         <template v-else>

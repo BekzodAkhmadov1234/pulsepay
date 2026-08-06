@@ -28,6 +28,8 @@ databaseChangeLog:
       file: db/changelog/changes/stage-1/013-security-cooldowns.yaml
   - include:
       file: db/changelog/changes/stage-1/014-card-status-inactive.yaml
+  - include:
+      file: db/changelog/changes/stage-1/015-card-balance.yaml
 
   # Stage 2 — merchant / C2B / settlement (enabled separately)
   - include:
@@ -58,3 +60,5 @@ databaseChangeLog:
       file: db/changelog/changes/seed/s06-ledger-accounts.yaml
   - include:
       file: db/changelog/changes/seed/s07-regulatory-params.yaml
+  - include:
+      file: db/changelog/changes/seed/s08-operational-seed-data.yaml

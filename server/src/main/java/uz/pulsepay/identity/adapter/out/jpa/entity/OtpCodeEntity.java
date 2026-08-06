@@ -1,9 +1,8 @@
 package uz.pulsepay.identity.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.identity.domain.model.OtpCode;
@@ -23,7 +22,7 @@ public class OtpCodeEntity {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = OtpPurposeConverter.class)
     @Column(name = "purpose", nullable = false, length = 20)
     private OtpPurpose purpose;
 

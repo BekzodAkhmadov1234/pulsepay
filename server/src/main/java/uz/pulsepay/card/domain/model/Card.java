@@ -22,7 +22,8 @@ public record Card(
         Instant verifiedAt,
         boolean isDefault,
         boolean isSpecialCardAccount,
-        String scaPurpose
+        String scaPurpose,
+        long balanceTiyin
 ) {
     public boolean isUsable() {
         return status == CardStatus.VERIFIED;

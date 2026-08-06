@@ -1,77 +1,257 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import { ArrowUpRight, ArrowDownLeft, Store, Activity } from '@lucide/vue';
+import { useCardsStore } from '@/stores/cards';
+import { useTransfersStore } from '@/stores/transfers';
+import type { TransferDto } from '@/lib/api/transfers';
 
+const router = useRouter();
 const auth = useAuthStore();
+const cardsStore = useCardsStore();
+const transfersStore = useTransfersStore();
 
-const stats = [
-  { label: 'Available balance', value: '— UZS', sub: 'Connect a card to fund your wallet' },
-  { label: 'Transfers this month', value: '0', sub: 'No transfers yet' },
-  { label: 'KYC level', value: auth.user?.kycLevel ?? '—', sub: 'Identity verification' },
-];
+onMounted(() => {
+  cardsStore.fetchCards();
+  transfersStore.fetchTransfers();
+});
 
-const actions = [
-  { label: 'Send money', icon: ArrowUpRight },
-  { label: 'Receive', icon: ArrowDownLeft },
-  { label: 'Pay merchant', icon: Store },
-];
+const balanceVisible = ref(true);
+
+const totalBalanceUzs = computed(() =>
+  cardsStore.cards.reduce((sum, c) => sum + (c.balanceUzs ?? 0), 0)
+);
+
+const balanceDisplay = computed(() =>
+  cardsStore.cards.length === 0
+    ? '— UZS'
+    : Number(totalBalanceUzs.value).toLocaleString('uz-UZ') + ' UZS'
+);
+
+// Transaction detail dialog
+const selectedTx = ref<TransferDto | null>(null);
+
+function openDetail(tx: TransferDto) {
+  selectedTx.value = tx;
+}
+
+function closeDetail() {
+  selectedTx.value = null;
+}
+
+function formatAmount(uzs: number) {
+  return new Intl.NumberFormat('uz-UZ', { style: 'decimal', maximumFractionDigits: 0 }).format(uzs);
+}
+
+function formatTime(iso: string | null | undefined) {
+  if (!iso) return '—';
+  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateTime(iso: string | null | undefined) {
+  if (!iso) return '—';
+  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function txDate(tx: TransferDto) {
+  return formatDateTime(tx.processedAt ?? tx.completedAt ?? tx.initiatedAt);
+}
+
+function statusLabel(status: string) {
+  if (status === 'completed') return 'Successful transfer';
+  if (status === 'failed') return 'Failed transfer';
+  if (status === 'processing') return 'Processing';
+  return status;
+}
+
+function statusColor(status: string) {
+  if (status === 'completed') return 'positive';
+  if (status === 'failed') return 'negative';
+  return 'warning';
+}
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Welcome -->
-    <section>
-      <p class="text-sm text-muted-fg">Good day,</p>
-      <h1 class="mt-0.5 text-2xl font-bold text-foreground">
-        {{ auth.user?.fullName || auth.user?.phoneE164 || 'Dashboard' }}
-      </h1>
-    </section>
-
-    <!-- Stats -->
-    <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div
-        v-for="stat in stats"
-        :key="stat.label"
-        class="rounded-xl border border-border bg-white p-5 shadow-xs"
-      >
-        <p class="text-xs font-medium text-muted-fg">{{ stat.label }}</p>
-        <p class="mt-1 text-2xl font-bold tracking-tight text-foreground">{{ stat.value }}</p>
-        <p class="mt-0.5 text-xs text-muted-fg">{{ stat.sub }}</p>
+  <q-page class="q-pa-lg">
+    <div style="max-width: 1024px; margin: 0 auto">
+      <!-- Welcome -->
+      <div class="q-mb-lg">
+        <p class="text-body2 text-grey-6 q-mb-xs">Good day,</p>
+        <h1 class="text-h5 text-weight-bold q-my-none">
+          {{ auth.user?.fullName || auth.user?.phoneE164 || 'Dashboard' }}
+        </h1>
       </div>
-    </section>
 
-    <!-- Quick actions -->
-    <section>
-      <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-fg">
-        Quick actions
-      </h2>
-      <div class="grid grid-cols-3 gap-3">
-        <button
-          v-for="action in actions"
-          :key="action.label"
-          type="button"
-          class="flex flex-col items-center gap-2.5 rounded-xl border border-border bg-white p-5 text-center transition-colors hover:border-brand-200 hover:bg-brand-50"
+      <!-- Stats -->
+      <div class="row q-col-gutter-md q-mb-xl">
+        <div class="col-12 col-sm-4">
+          <q-card
+            flat
+            bordered
+            class="q-pa-md"
+            style="cursor: pointer"
+            @click="router.push('/cards')"
+          >
+            <p class="text-caption text-grey-6 q-mb-xs">Total balance</p>
+            <div class="row items-center no-wrap">
+              <p class="text-h5 text-weight-bold q-my-none col">
+                {{ balanceVisible ? balanceDisplay : '••••• UZS' }}
+              </p>
+              <q-btn
+                flat
+                round
+                dense
+                :icon="balanceVisible ? 'visibility' : 'visibility_off'"
+                color="grey-6"
+                size="sm"
+                @click.stop="balanceVisible = !balanceVisible"
+              />
+            </div>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Transaction history -->
+      <div>
+        <p
+          class="text-caption text-weight-bold text-uppercase text-grey-6 q-mb-sm"
+          style="letter-spacing: 0.1em"
         >
-          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50">
-            <component :is="action.icon" class="h-4 w-4 text-brand-600" />
-          </span>
-          <span class="text-xs font-medium text-foreground">{{ action.label }}</span>
-        </button>
-      </div>
-    </section>
+          Transaction history
+        </p>
 
-    <!-- Activity -->
-    <section>
-      <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-fg">
-        Recent activity
-      </h2>
-      <div
-        class="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-14 text-center"
-      >
-        <Activity class="h-8 w-8 text-muted-fg/30" />
-        <p class="mt-3 text-sm font-medium text-foreground">No transactions yet</p>
-        <p class="mt-0.5 text-xs text-muted-fg">Your payment history will appear here.</p>
+        <!-- Loading -->
+        <div
+          v-if="transfersStore.isLoading && transfersStore.transfers.length === 0"
+          class="row justify-center q-pa-xl"
+        >
+          <q-spinner color="primary" size="40px" />
+        </div>
+
+        <!-- Empty state -->
+        <q-card v-else-if="transfersStore.transfers.length === 0" flat bordered>
+          <q-card-section class="column items-center q-pa-xl text-center">
+            <q-icon name="show_chart" size="40px" color="grey-4" />
+            <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">No transactions yet</p>
+            <p class="text-caption text-grey-6 q-mb-none">Your payment history will appear here.</p>
+          </q-card-section>
+        </q-card>
+
+        <!-- Transaction list -->
+        <q-list v-else bordered separator rounded>
+          <q-item
+            v-for="tx in transfersStore.transfers"
+            :key="tx.id + (tx.direction ?? '')"
+            v-ripple
+            clickable
+            class="q-py-sm"
+            @click="openDetail(tx)"
+          >
+            <q-item-section avatar>
+              <q-icon
+                :name="tx.direction === 'credit' ? 'arrow_downward' : 'arrow_upward'"
+                :color="tx.direction === 'credit' ? 'positive' : 'negative'"
+                size="22px"
+              />
+            </q-item-section>
+
+            <q-item-section>
+              <q-item-label
+                class="text-weight-medium"
+                :class="tx.direction === 'credit' ? 'text-positive' : 'text-negative'"
+              >
+                {{ tx.direction === 'credit' ? '+' : '-' }}{{ formatAmount(tx.amountUzs) }} UZS
+              </q-item-label>
+              <q-item-label caption>
+                {{ (tx.direction === 'credit' ? tx.senderName : tx.recipientName) || '—' }}
+              </q-item-label>
+            </q-item-section>
+
+            <q-item-section side>
+              <q-item-label caption>{{
+                formatTime(tx.processedAt ?? tx.initiatedAt)
+              }}</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
       </div>
-    </section>
-  </div>
+    </div>
+
+    <!-- Transaction detail dialog -->
+    <q-dialog :model-value="selectedTx !== null" @update:model-value="closeDetail">
+      <q-card style="min-width: 320px; max-width: 480px; width: 100%">
+        <q-card-section class="column items-center q-pt-lg q-pb-sm">
+          <q-icon
+            :name="selectedTx?.status === 'completed' ? 'check_circle' : 'error'"
+            :color="statusColor(selectedTx?.status ?? '')"
+            size="48px"
+          />
+          <p class="text-subtitle1 text-weight-bold q-mt-sm q-mb-none">
+            {{ statusLabel(selectedTx?.status ?? '') }}
+          </p>
+          <p class="text-h5 text-weight-bold q-mt-xs q-mb-none">
+            {{ formatAmount(selectedTx?.amountUzs ?? 0) }} UZS
+          </p>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-list dense class="q-py-sm">
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Date</q-item-label>
+              <q-item-label>{{ selectedTx ? txDate(selectedTx) : '—' }}</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Receiver</q-item-label>
+              <q-item-label>{{ selectedTx?.recipientName || '—' }}</q-item-label>
+              <q-item-label caption class="q-mt-xs" style="font-family: monospace">
+                {{ selectedTx?.recipientMaskedPan || '—' }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Sender</q-item-label>
+              <q-item-label>{{ selectedTx?.senderName || '—' }}</q-item-label>
+              <q-item-label caption class="q-mt-xs" style="font-family: monospace">
+                {{ selectedTx?.senderMaskedPan || '—' }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Commission</q-item-label>
+              <q-item-label>
+                {{
+                  selectedTx?.feeAmountUzs
+                    ? formatAmount(selectedTx.feeAmountUzs) + ' UZS'
+                    : '0 UZS'
+                }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+
+        <q-card-actions align="right" class="q-pb-md q-pr-md">
+          <q-btn flat no-caps label="Close" color="primary" @click="closeDetail" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+  </q-page>
 </template>

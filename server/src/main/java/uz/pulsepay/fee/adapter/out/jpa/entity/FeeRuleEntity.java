@@ -1,9 +1,8 @@
 package uz.pulsepay.fee.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.fee.domain.model.FeePayer;
@@ -37,7 +36,7 @@ public class FeeRuleEntity {
     @Column(name = "max_amount")
     private Long maxAmount;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = FeeTypeConverter.class)
     @Column(name = "fee_type", nullable = false, length = 10)
     private FeeType feeType;
 
@@ -71,11 +70,11 @@ public class FeeRuleEntity {
     @Column(name = "transfer_type_id")
     private Integer transferTypeId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = FeePayerConverter.class)
     @Column(name = "fee_payer", nullable = false, length = 10)
     private FeePayer feePayer;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = FeeRecipientConverter.class)
     @Column(name = "fee_recipient", nullable = false, length = 20)
     private FeeRecipient feeRecipient;
 

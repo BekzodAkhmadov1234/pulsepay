@@ -38,14 +38,14 @@ public class NetworkTransactionService implements ExecuteCardTransferPort {
             throw new DomainException("No gateway available for network: " + network);
         }
 
-        String debitRef = gateway.debitCard(senderCardId, amount, transferId.toString() + "-debit");
+        gateway.debitCard(senderCardId, amount, transferId.toString() + "-debit");
         transactionRepository.save(new CardTransaction(
                 UUID.randomUUID(), transferId, 1, senderCardId,
-                amount.amount(), debitRef, null, "success", Instant.now(), null));
+                amount.amount(), null, null, "success", Instant.now(), null));
 
-        String creditRef = gateway.creditCard(recipientCardId, amount, transferId.toString() + "-credit");
+        gateway.creditCard(recipientCardId, amount, transferId.toString() + "-credit");
         transactionRepository.save(new CardTransaction(
                 UUID.randomUUID(), transferId, 2, recipientCardId,
-                amount.amount(), creditRef, null, "success", Instant.now(), null));
+                amount.amount(), null, null, "success", Instant.now(), null));
     }
 }

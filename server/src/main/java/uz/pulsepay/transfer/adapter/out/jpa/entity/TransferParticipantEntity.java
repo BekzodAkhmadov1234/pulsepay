@@ -1,11 +1,13 @@
 package uz.pulsepay.transfer.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import uz.pulsepay.party.adapter.out.jpa.entity.InstrumentTypeConverter;
+import uz.pulsepay.party.adapter.out.jpa.entity.PartyTypeConverter;
+import uz.pulsepay.transfer.adapter.out.jpa.entity.ParticipantRoleConverter;
 import uz.pulsepay.party.domain.model.InstrumentType;
 import uz.pulsepay.party.domain.model.PartyType;
 import uz.pulsepay.transfer.domain.model.ParticipantRole;
@@ -25,21 +27,21 @@ public class TransferParticipantEntity {
     @Column(name = "transfer_id", nullable = false)
     private UUID transferId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ParticipantRoleConverter.class)
     @Column(name = "role", nullable = false, length = 10)
     private ParticipantRole role;
 
     @Column(name = "party_id", nullable = false)
     private UUID partyId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PartyTypeConverter.class)
     @Column(name = "party_type", nullable = false, length = 20)
     private PartyType partyType;
 
     @Column(name = "instrument_id", nullable = false)
     private UUID instrumentId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = InstrumentTypeConverter.class)
     @Column(name = "instrument_type", nullable = false, length = 20)
     private InstrumentType instrumentType;
 

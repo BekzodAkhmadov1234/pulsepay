@@ -53,7 +53,7 @@ describe('Auth Store', () => {
     vi.mocked(authApi.login).mockResolvedValue(MOCK_RESPONSE);
 
     const auth = useAuthStore();
-    await auth.login({ phoneE164: '+998901234567', otpCode: '123456' });
+    await auth.login({ phoneE164: '+998901234567' });
 
     expect(auth.isAuthenticated).toBe(true);
     expect(auth.user?.phoneE164).toBe('+998901234567');
@@ -64,7 +64,7 @@ describe('Auth Store', () => {
     vi.mocked(authApi.login).mockResolvedValue(MOCK_RESPONSE);
 
     const auth = useAuthStore();
-    await auth.login({ phoneE164: '+998901234567', otpCode: '123456' });
+    await auth.login({ phoneE164: '+998901234567' });
     auth.logout();
 
     expect(auth.isAuthenticated).toBe(false);
@@ -76,9 +76,7 @@ describe('Auth Store', () => {
     vi.mocked(authApi.login).mockRejectedValue(new ApiError(400, '400', 'Invalid or expired OTP'));
 
     const auth = useAuthStore();
-    await expect(
-      auth.login({ phoneE164: '+998901234567', otpCode: '000000' })
-    ).rejects.toBeInstanceOf(ApiError);
+    await expect(auth.login({ phoneE164: '+998901234567' })).rejects.toBeInstanceOf(ApiError);
 
     expect(auth.isAuthenticated).toBe(false);
     expect(auth.isLoading).toBe(false);

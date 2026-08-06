@@ -1,9 +1,8 @@
 package uz.pulsepay.identity.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.identity.domain.model.Admin;
@@ -29,7 +28,7 @@ public class AdminEntity {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = AdminRoleConverter.class)
     @Column(name = "role", nullable = false, length = 20)
     private AdminRole role;
 

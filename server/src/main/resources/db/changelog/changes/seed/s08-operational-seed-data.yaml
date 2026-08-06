@@ -1,0 +1,134 @@
+databaseChangeLog:
+
+  # ── Additional ledger account ─────────────────────────────────────────────────
+  # Generic "card_clearing" account used when the ledger service receives
+  # instrumentType=CARD (stub phase — no network split yet).
+  - changeSet:
+      id: s08-ledger-account-card-clearing
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column: { name: id,               value: "10000000-0000-0000-0000-000000000005" }
+              - column: { name: account_type_id,   valueNumeric: 1 }
+              - column: { name: normal_balance,    value: "debit" }
+              - column: { name: code,              value: "card_clearing" }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: status,            value: "open" }
+
+  # ── Fee rules ────────────────────────────────────────────────────────────────
+  # Zero-fee rule for all P2P transfers during the stub phase.
+  # Replace with network-specific tiered rules when PSP billing is confirmed.
+  - changeSet:
+      id: s08-fee-rules-p2p-zero
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                  value: "00000000-0000-0000-0000-000000000101" }
+              - column: { name: name,                 value: "P2P zero-fee (stub phase)" }
+              - column: { name: transfer_type_id,     valueNumeric: 1 }
+              - column: { name: fee_type,             value: "fixed" }
+              - column: { name: fixed_amount,         valueNumeric: 0 }
+              - column: { name: min_amount,           valueNumeric: 0 }
+              - column: { name: currency_code,        value: "UZS" }
+              - column: { name: priority,             valueNumeric: 100 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: fee_payer,            value: "sender" }
+              - column: { name: fee_recipient,        value: "platform" }
+              - column: { name: effective_from,       valueComputed: "NOW()" }
+
+  # ── Limit rules ──────────────────────────────────────────────────────────────
+  # Per-transaction cap: 30 000 000 UZS (3 000 000 000 tiyin) for all kyc tiers.
+  # This mirrors the CBU P2P regulatory ceiling for unverified users.
+  - changeSet:
+      id: s08-limit-rules-p2p-per-tx
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: limit_rules
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000000201" }
+              - column: { name: name,              value: "P2P per-transaction limit" }
+              - column: { name: scope,             value: "per_transaction" }
+              - column: { name: kyc_tier,          value: "all" }
+              - column: { name: transfer_type_id,  valueNumeric: 1 }
+              - column: { name: max_amount,        valueNumeric: 3000000000 }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: limit_category,    value: "our_platform_limit" }
+              - column: { name: actor_type,        value: "person" }
+              - column: { name: is_active,         valueBoolean: true }
+              - column: { name: effective_from,    valueComputed: "NOW()" }
+
+  # ── Transfer routes ───────────────────────────────────────────────────────────
+  # Four P2P routes covering all network combinations.
+  # processor_name = "stub" until real gateway codes are confirmed.
+  - changeSet:
+      id: s08-routes-uzcard-uzcard
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000301" }
+              - column: { name: route_code,            value: "uzcard_to_uzcard_p2p" }
+              - column: { name: source_network,        value: "uzcard" }
+              - column: { name: destination_network,   value: "uzcard" }
+              - column: { name: transfer_type_id,      valueNumeric: 1 }
+              - column: { name: processor_name,        value: "stub" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  - changeSet:
+      id: s08-routes-uzcard-humo
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000302" }
+              - column: { name: route_code,            value: "uzcard_to_humo_p2p" }
+              - column: { name: source_network,        value: "uzcard" }
+              - column: { name: destination_network,   value: "humo" }
+              - column: { name: transfer_type_id,      valueNumeric: 1 }
+              - column: { name: processor_name,        value: "stub" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  - changeSet:
+      id: s08-routes-humo-humo
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000303" }
+              - column: { name: route_code,            value: "humo_to_humo_p2p" }
+              - column: { name: source_network,        value: "humo" }
+              - column: { name: destination_network,   value: "humo" }
+              - column: { name: transfer_type_id,      valueNumeric: 1 }
+              - column: { name: processor_name,        value: "stub" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  - changeSet:
+      id: s08-routes-humo-uzcard
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000304" }
+              - column: { name: route_code,            value: "humo_to_uzcard_p2p" }
+              - column: { name: source_network,        value: "humo" }
+              - column: { name: destination_network,   value: "uzcard" }
+              - column: { name: transfer_type_id,      valueNumeric: 1 }
+              - column: { name: processor_name,        value: "stub" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }

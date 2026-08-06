@@ -1,9 +1,8 @@
 package uz.pulsepay.transfer.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.shared.domain.CurrencyCode;
@@ -23,16 +22,16 @@ public class TransferEntity {
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "amount_tiyin", nullable = false)
+    @Column(name = "amount", nullable = false)
     private long amountTiyin;
 
     @Column(name = "currency_code", nullable = false, length = 3)
     private String currencyCode;
 
-    @Column(name = "fee_amount_tiyin", nullable = false)
+    @Column(name = "fee_amount", nullable = false)
     private long feeAmountTiyin;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TransferStatusConverter.class)
     @Column(name = "status", nullable = false, length = 20)
     private TransferStatus status;
 
@@ -54,7 +53,7 @@ public class TransferEntity {
     @Column(name = "purpose_code_id")
     private Integer purposeCodeId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TransferChannelConverter.class)
     @Column(name = "channel", nullable = false, length = 10)
     private TransferChannel channel;
 

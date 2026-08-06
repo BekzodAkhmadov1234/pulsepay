@@ -1,9 +1,8 @@
 package uz.pulsepay.ledger.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.ledger.domain.model.EntryDirection;
@@ -26,7 +25,7 @@ public class LedgerEntryEntity {
     @Column(name = "ledger_account_id", nullable = false)
     private UUID ledgerAccountId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = EntryDirectionConverter.class)
     @Column(name = "direction", nullable = false, length = 6)
     private EntryDirection direction;
 

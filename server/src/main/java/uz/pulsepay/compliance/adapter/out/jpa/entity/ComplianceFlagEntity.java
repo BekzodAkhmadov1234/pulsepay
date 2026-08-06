@@ -1,9 +1,8 @@
 package uz.pulsepay.compliance.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.compliance.domain.model.ComplianceFlag;
@@ -26,7 +25,7 @@ public class ComplianceFlagEntity {
     @Column(name = "party_id")
     private UUID partyId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = FlagTypeConverter.class)
     @Column(name = "flag_type", nullable = false, length = 20)
     private FlagType flagType;
 

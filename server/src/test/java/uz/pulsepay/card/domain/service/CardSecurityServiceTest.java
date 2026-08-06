@@ -104,6 +104,6 @@ class CardSecurityServiceTest {
     private static Card card(UUID id, CardStatus status) {
         return new Card(id, "token", "**** 1234", "uzcard", null, null,
                 "Test User", (short) 12, (short) 27,
-                status, null, false, false, null);
+                status, null, false, false, null, 0L);
     }
 }

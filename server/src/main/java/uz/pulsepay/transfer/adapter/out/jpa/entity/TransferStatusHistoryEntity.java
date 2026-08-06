@@ -1,9 +1,8 @@
 package uz.pulsepay.transfer.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.transfer.domain.model.TransferStatus;
@@ -23,11 +22,11 @@ public class TransferStatusHistoryEntity {
     @Column(name = "transfer_id", nullable = false)
     private UUID transferId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TransferStatusConverter.class)
     @Column(name = "from_status", length = 20)
     private TransferStatus fromStatus;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TransferStatusConverter.class)
     @Column(name = "to_status", nullable = false, length = 20)
     private TransferStatus toStatus;
 

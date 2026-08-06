@@ -1,9 +1,8 @@
 package uz.pulsepay.party.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.party.domain.model.Party;
@@ -20,7 +19,7 @@ public class PartyEntity {
     @Column(name = "id")
     private UUID id;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PartyTypeConverter.class)
     @Column(name = "party_type", nullable = false, length = 20)
     private PartyType partyType;
 

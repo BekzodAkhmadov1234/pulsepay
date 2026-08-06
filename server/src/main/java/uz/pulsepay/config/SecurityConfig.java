@@ -16,6 +16,7 @@ import uz.pulsepay.infrastructure.security.AdminJwtFilter;
 import uz.pulsepay.infrastructure.security.JwtAuthenticationFilter;
 import uz.pulsepay.infrastructure.security.JwtService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 /**
@@ -83,6 +84,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/dev/**").permitAll()
                         .anyRequest().authenticated())
+                .exceptionHandling(e -> e.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required\"}");
+                        }))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();

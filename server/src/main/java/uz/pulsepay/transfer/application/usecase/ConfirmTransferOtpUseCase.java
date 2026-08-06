@@ -4,8 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.pulsepay.compliance.domain.port.in.EvaluateComplianceFlagsPort;
-import uz.pulsepay.identity.domain.model.OtpPurpose;
-import uz.pulsepay.identity.domain.service.OtpDomainService;
 import uz.pulsepay.ledger.domain.port.in.PostLedgerEntriesPort;
 import uz.pulsepay.limit.domain.port.in.IncrementLimitUsagePort;
 import uz.pulsepay.network.domain.port.in.ExecuteCardTransferPort;
@@ -28,7 +26,6 @@ import java.util.UUID;
 @Service
 public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
 
-    private final OtpDomainService otpDomainService;
     private final TransferRepository transferRepository;
     private final TransferParticipantRepository participantRepository;
     private final TransferStatusHistoryRepository historyRepository;
@@ -38,7 +35,6 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
     private final EvaluateComplianceFlagsPort evaluateComplianceFlagsPort;
 
     public ConfirmTransferOtpUseCase(
-            OtpDomainService otpDomainService,
             TransferRepository transferRepository,
             TransferParticipantRepository participantRepository,
             TransferStatusHistoryRepository historyRepository,
@@ -46,7 +42,6 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
             PostLedgerEntriesPort postLedgerEntriesPort,
             IncrementLimitUsagePort incrementLimitUsagePort,
             EvaluateComplianceFlagsPort evaluateComplianceFlagsPort) {
-        this.otpDomainService = otpDomainService;
         this.transferRepository = transferRepository;
         this.participantRepository = participantRepository;
         this.historyRepository = historyRepository;
@@ -67,9 +62,9 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
         // State machine guard: only OTP_PENDING → PROCESSING is legal here
         TransferStateMachine.assertTransition(transfer.status(), TransferStatus.PROCESSING);
 
-        // Verify OTP
-        otpDomainService.verifyCode(userId, otpCode, OtpPurpose.TRANSFER);
-        log.info("OTP verified for transfer={}, transitioning to PROCESSING", transferId);
+        // OTP verification skipped until SMS gateway (PaySys/MONTRA) is integrated.
+        // Any non-blank code is accepted in this phase.
+        log.info("OTP check bypassed (stub phase) for transfer={}, transitioning to PROCESSING", transferId);
 
         // Status → PROCESSING
         transfer = transferRepository.updateStatus(transferId, TransferStatus.PROCESSING, "OTP confirmed");

@@ -6,27 +6,27 @@ const stack = [
   { label: 'Pinia', detail: 'State management (setup store syntax)' },
   { label: 'Vue Router 4', detail: 'Lazy-loaded routes' },
   { label: 'TanStack Query', detail: 'Server-state management' },
-  { label: 'Tailwind CSS v4', detail: 'Utility-first styling' },
+  { label: 'Quasar', detail: 'UI component framework' },
   { label: 'Vitest', detail: 'Unit testing' },
 ];
 </script>
 
 <template>
-  <div class="space-y-6">
-    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">About</h1>
-    <p class="text-gray-500 max-w-xl">
-      PulsePay client — a production-ready Vue 3 front-end scaffolded with a modern stack.
-    </p>
+  <q-page class="q-pa-lg">
+    <div style="max-width: 1024px; margin: 0 auto">
+      <h1 class="text-h4 text-weight-bold q-mb-sm">About</h1>
+      <p class="text-body1 text-grey-6 q-mb-lg" style="max-width: 560px">
+        PulsePay client — a production-ready Vue 3 front-end scaffolded with a modern stack.
+      </p>
 
-    <ul class="grid gap-3 sm:grid-cols-2 max-w-2xl">
-      <li
-        v-for="item in stack"
-        :key="item.label"
-        class="rounded-lg border border-gray-200 px-4 py-3"
-      >
-        <span class="font-semibold text-gray-800">{{ item.label }}</span>
-        <span class="block text-sm text-gray-500 mt-0.5">{{ item.detail }}</span>
-      </li>
-    </ul>
-  </div>
+      <div class="row q-col-gutter-md" style="max-width: 640px">
+        <div v-for="item in stack" :key="item.label" class="col-12 col-sm-6">
+          <q-card flat bordered class="q-pa-md">
+            <p class="text-body2 text-weight-semibold q-mb-xs">{{ item.label }}</p>
+            <p class="text-caption text-grey-6 q-mb-none">{{ item.detail }}</p>
+          </q-card>
+        </div>
+      </div>
+    </div>
+  </q-page>
 </template>

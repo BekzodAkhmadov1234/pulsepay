@@ -65,7 +65,7 @@ function onPhoneInput(val: string | number | null) {
 </script>
 
 <template>
-  <div class="auth-root row no-wrap">
+  <q-page class="row no-wrap">
     <!-- ── Brand panel (lg+) ─────────────────────────────────── -->
     <aside class="brand-panel gt-md col-5 column justify-between q-pa-xl">
       <RouterLink to="/" class="brand-logo text-weight-black">
@@ -157,15 +157,10 @@ function onPhoneInput(val: string | number | null) {
         </p>
       </div>
     </main>
-  </div>
+  </q-page>
 </template>
 
 <style scoped>
-/* ── Auth root ───────────────────────────────────────────────── */
-.auth-root {
-  min-height: 100dvh;
-}
-
 /* ── Brand panel ─────────────────────────────────────────────── */
 .brand-panel {
   background: linear-gradient(150deg, oklch(0.259 0.111 277) 0%, oklch(0.354 0.161 277) 100%);

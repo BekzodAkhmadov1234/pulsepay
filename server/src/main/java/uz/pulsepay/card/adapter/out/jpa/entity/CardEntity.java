@@ -64,12 +64,16 @@ public class CardEntity {
     @Column(name = "sca_purpose", length = 30)
     private String scaPurpose;
 
+    @Column(name = "balance_tiyin", nullable = false)
+    private long balanceTiyin;
+
     protected CardEntity() {}
 
     public CardEntity(UUID id, String cardToken, String maskedPan, String cardNetwork,
                       Integer paymentNetworkId, UUID issuerBankId, String cardHolderName,
                       short expMonth, short expYear, CardStatus status, Instant verifiedAt,
-                      boolean isDefault, boolean isSpecialCardAccount, String scaPurpose) {
+                      boolean isDefault, boolean isSpecialCardAccount, String scaPurpose,
+                      long balanceTiyin) {
         this.id = id;
         this.cardToken = cardToken;
         this.maskedPan = maskedPan;
@@ -84,18 +88,19 @@ public class CardEntity {
         this.isDefault = isDefault;
         this.isSpecialCardAccount = isSpecialCardAccount;
         this.scaPurpose = scaPurpose;
+        this.balanceTiyin = balanceTiyin;
     }
 
     public Card toDomain() {
         return new Card(id, cardToken, maskedPan, cardNetwork, paymentNetworkId, issuerBankId,
                 cardHolderName, expMonth, expYear, status, verifiedAt, isDefault,
-                isSpecialCardAccount, scaPurpose);
+                isSpecialCardAccount, scaPurpose, balanceTiyin);
     }
 
     public static CardEntity fromDomain(Card c) {
         return new CardEntity(c.id(), c.cardToken(), c.maskedPan(), c.cardNetwork(),
                 c.paymentNetworkId(), c.issuerBankId(), c.cardHolderName(),
                 c.expMonth(), c.expYear(), c.status(), c.verifiedAt(),
-                c.isDefault(), c.isSpecialCardAccount(), c.scaPurpose());
+                c.isDefault(), c.isSpecialCardAccount(), c.scaPurpose(), c.balanceTiyin());
     }
 }

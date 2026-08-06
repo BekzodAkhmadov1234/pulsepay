@@ -27,6 +27,24 @@ const router = createRouter({
       component: () => import('../views/RegisterView.vue'),
       meta: { guestOnly: true, authLayout: true },
     },
+    {
+      path: '/cards',
+      name: 'cards',
+      component: () => import('../views/CardsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/send',
+      name: 'send',
+      component: () => import('../views/SendMoneyView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/transfers',
+      name: 'transfers',
+      component: () => import('../views/TransfersView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 });
 

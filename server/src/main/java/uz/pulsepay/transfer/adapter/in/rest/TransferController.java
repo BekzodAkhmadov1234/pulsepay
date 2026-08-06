@@ -14,12 +14,15 @@ import org.springframework.web.bind.annotation.*;
 import uz.pulsepay.shared.domain.Money;
 import uz.pulsepay.transfer.adapter.in.rest.dto.ConfirmOtpRequest;
 import uz.pulsepay.transfer.adapter.in.rest.dto.InitiateTransferRequest;
-import uz.pulsepay.transfer.domain.model.Transfer;
+import uz.pulsepay.transfer.adapter.in.rest.dto.TransferResponse;
 import uz.pulsepay.transfer.domain.model.TransferChannel;
 import uz.pulsepay.transfer.domain.port.in.ConfirmTransferOtpPort;
 import uz.pulsepay.transfer.domain.port.in.GetTransferPort;
 import uz.pulsepay.transfer.domain.port.in.InitiateTransferPort;
+import uz.pulsepay.transfer.domain.port.in.ListTransfersPort;
+import uz.pulsepay.transfer.domain.port.in.ListTransferSummariesPort;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Transfers", description = "P2P card transfer lifecycle: initiate → OTP confirm → completed/failed")
@@ -31,13 +34,19 @@ public class TransferController {
     private final InitiateTransferPort initiateTransferPort;
     private final ConfirmTransferOtpPort confirmTransferOtpPort;
     private final GetTransferPort getTransferPort;
+    private final ListTransfersPort listTransfersPort;
+    private final ListTransferSummariesPort listTransferSummariesPort;
 
     public TransferController(InitiateTransferPort initiateTransferPort,
                                ConfirmTransferOtpPort confirmTransferOtpPort,
-                               GetTransferPort getTransferPort) {
+                               GetTransferPort getTransferPort,
+                               ListTransfersPort listTransfersPort,
+                               ListTransferSummariesPort listTransferSummariesPort) {
         this.initiateTransferPort = initiateTransferPort;
         this.confirmTransferOtpPort = confirmTransferOtpPort;
         this.getTransferPort = getTransferPort;
+        this.listTransfersPort = listTransfersPort;
+        this.listTransferSummariesPort = listTransferSummariesPort;
     }
 
     @Operation(summary = "Initiate a transfer",
@@ -50,20 +59,17 @@ public class TransferController {
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     })
     @PostMapping
-    public ResponseEntity<Transfer> initiate(
+    public ResponseEntity<TransferResponse> initiate(
             @Valid @RequestBody InitiateTransferRequest request,
             Authentication authentication) {
-        // JwtAuthenticationFilter stores the user UUID string in the authentication details.
-        // The principal is Spring Security's User (username = phoneE164); the UUID is in details.
         UUID senderId = extractUserId(authentication);
 
-        // Risk #8: parse via BigDecimal, convert to tiyin with longValueExact
         Money amount = Money.fromUzs(request.amountUzs());
         TransferChannel channel = request.channel() != null
                 ? TransferChannel.valueOf(request.channel().toUpperCase())
                 : TransferChannel.MOBILE_APP;
 
-        Transfer transfer = initiateTransferPort.initiate(
+        var transfer = initiateTransferPort.initiate(
                 senderId,
                 request.senderInstrumentId(),
                 request.senderCardNetwork(),
@@ -75,7 +81,7 @@ public class TransferController {
                 request.purposeCodeId(),
                 channel,
                 request.idempotencyKey());
-        return ResponseEntity.accepted().body(transfer);
+        return ResponseEntity.accepted().body(TransferResponse.from(transfer));
     }
 
     @Operation(summary = "Confirm transfer OTP",
@@ -88,12 +94,12 @@ public class TransferController {
             @ApiResponse(responseCode = "409", description = "Transfer is not in otp_pending status")
     })
     @PatchMapping("/{id}/otp")
-    public ResponseEntity<Transfer> confirmOtp(
+    public ResponseEntity<TransferResponse> confirmOtp(
             @Parameter(description = "Transfer UUID") @PathVariable UUID id,
             @Valid @RequestBody ConfirmOtpRequest request,
             Authentication authentication) {
-        Transfer transfer = confirmTransferOtpPort.confirmOtp(id, extractUserId(authentication), request.code());
-        return ResponseEntity.ok(transfer);
+        var transfer = confirmTransferOtpPort.confirmOtp(id, extractUserId(authentication), request.code());
+        return ResponseEntity.ok(TransferResponse.from(transfer));
     }
 
     @Operation(summary = "Get transfer by ID",
@@ -103,20 +109,22 @@ public class TransferController {
             @ApiResponse(responseCode = "404", description = "Transfer not found or not owned by caller")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Transfer> getTransfer(
+    public ResponseEntity<TransferResponse> getTransfer(
             @Parameter(description = "Transfer UUID") @PathVariable UUID id,
             Authentication authentication) {
-        return ResponseEntity.ok(getTransferPort.getById(id, extractUserId(authentication)));
+        return ResponseEntity.ok(TransferResponse.from(getTransferPort.getById(id, extractUserId(authentication))));
     }
 
-    /**
-     * Retrieves the authenticated user's UUID from the {@link Authentication} details slot.
-     *
-     * <p>{@link uz.pulsepay.infrastructure.security.JwtAuthenticationFilter} stores the user
-     * UUID string via {@link UsernamePasswordAuthenticationToken#setDetails(Object)} so that
-     * controllers can obtain it without an additional database lookup. The principal's username
-     * is the user's {@code phone_e164} — not the UUID — so we must read from details here.
-     */
+    @Operation(summary = "List my transfers", description = "Returns all transfers initiated by the authenticated user, newest first, with participant details.")
+    @ApiResponse(responseCode = "200", description = "Transfer list")
+    @GetMapping
+    public ResponseEntity<List<TransferResponse>> listTransfers(Authentication authentication) {
+        UUID userId = extractUserId(authentication);
+        List<TransferResponse> result = listTransferSummariesPort.listSummariesByParticipant(userId)
+                .stream().map(TransferResponse::from).toList();
+        return ResponseEntity.ok(result);
+    }
+
     private static UUID extractUserId(Authentication authentication) {
         String userId = (String) ((UsernamePasswordAuthenticationToken) authentication).getDetails();
         return UUID.fromString(userId);

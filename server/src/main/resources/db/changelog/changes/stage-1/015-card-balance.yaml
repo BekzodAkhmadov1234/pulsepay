@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-card-balance
+      author: pulsepay
+      comment: >
+        Stub phase — add balance_tiyin to cards table so stub gateways can track funds locally.
+        Default is 5 000 000 000 tiyin (50 000 000 UZS) per card, well above the 30M UZS per-tx limit.
+        When real Humo/UzCard APIs are integrated, this column becomes a shadow/cached balance.
+      changes:
+        - addColumn:
+            tableName: cards
+            columns:
+              - column:
+                  name: balance_tiyin
+                  type: BIGINT
+                  defaultValueNumeric: 5000000000
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE cards ADD CONSTRAINT chk_cards_balance_nonneg CHECK (balance_tiyin >= 0);

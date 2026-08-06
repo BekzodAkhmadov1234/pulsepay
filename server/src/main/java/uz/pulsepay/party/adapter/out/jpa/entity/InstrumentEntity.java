@@ -1,9 +1,8 @@
 package uz.pulsepay.party.adapter.out.jpa.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import uz.pulsepay.party.domain.model.Instrument;
@@ -24,11 +23,11 @@ public class InstrumentEntity {
     @Column(name = "owner_party_id", nullable = false)
     private UUID ownerPartyId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = InstrumentTypeConverter.class)
     @Column(name = "instrument_type", nullable = false, length = 20)
     private InstrumentType instrumentType;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = InstrumentStatusConverter.class)
     @Column(name = "status", nullable = false, length = 20)
     private InstrumentStatus status;
 

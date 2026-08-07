@@ -78,11 +78,70 @@ public class FeeRuleEntity {
     @Column(name = "fee_recipient", nullable = false, length = 20)
     private FeeRecipient feeRecipient;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Column(name = "created_by_admin_id")
+    private UUID createdByAdminId;
+
+    @Column(name = "updated_by_admin_id")
+    private UUID updatedByAdminId;
+
     protected FeeRuleEntity() {}
+
+    FeeRuleEntity(UUID id, String name, String sourceNetwork, String destinationNetwork,
+                  long minAmount, Long maxAmount, FeeType feeType, Long fixedAmount,
+                  Integer percentageBps, Long minFeeAmount, Long maxFeeAmount,
+                  String currencyCode, int priority, boolean isActive,
+                  Instant effectiveFrom, Instant effectiveTo, Integer transferTypeId,
+                  FeePayer feePayer, FeeRecipient feeRecipient,
+                  Instant createdAt, Instant updatedAt,
+                  UUID createdByAdminId, UUID updatedByAdminId) {
+        this.id = id;
+        this.name = name;
+        this.sourceNetwork = sourceNetwork;
+        this.destinationNetwork = destinationNetwork;
+        this.minAmount = minAmount;
+        this.maxAmount = maxAmount;
+        this.feeType = feeType;
+        this.fixedAmount = fixedAmount;
+        this.percentageBps = percentageBps;
+        this.minFeeAmount = minFeeAmount;
+        this.maxFeeAmount = maxFeeAmount;
+        this.currencyCode = currencyCode;
+        this.priority = priority;
+        this.isActive = isActive;
+        this.effectiveFrom = effectiveFrom;
+        this.effectiveTo = effectiveTo;
+        this.transferTypeId = transferTypeId;
+        this.feePayer = feePayer;
+        this.feeRecipient = feeRecipient;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.createdByAdminId = createdByAdminId;
+        this.updatedByAdminId = updatedByAdminId;
+    }
 
     public FeeRule toDomain() {
         return new FeeRule(id, name, sourceNetwork, destinationNetwork, minAmount, maxAmount,
                 feeType, fixedAmount, percentageBps, minFeeAmount, maxFeeAmount, currencyCode,
-                priority, isActive, effectiveFrom, effectiveTo, transferTypeId, feePayer, feeRecipient);
+                priority, isActive, effectiveFrom, effectiveTo, transferTypeId, feePayer, feeRecipient,
+                createdAt, createdByAdminId, updatedByAdminId);
+    }
+
+    public static FeeRuleEntity fromDomain(FeeRule r) {
+        Instant now = Instant.now();
+        return new FeeRuleEntity(
+                r.id(), r.name(), r.sourceNetwork(), r.destinationNetwork(),
+                r.minAmount(), r.maxAmount(), r.feeType(), r.fixedAmount(),
+                r.percentageBps(), r.minFeeAmount(), r.maxFeeAmount(),
+                r.currencyCode(), r.priority(), r.isActive(),
+                r.effectiveFrom(), r.effectiveTo(), r.transferTypeId(),
+                r.feePayer(), r.feeRecipient(),
+                r.createdAt() != null ? r.createdAt() : now, now,
+                r.createdByAdminId(), r.updatedByAdminId());
     }
 }

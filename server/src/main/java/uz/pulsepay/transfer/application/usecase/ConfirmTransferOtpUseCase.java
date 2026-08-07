@@ -4,9 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.pulsepay.compliance.domain.port.in.EvaluateComplianceFlagsPort;
+import uz.pulsepay.fee.domain.model.FeePayer;
+import uz.pulsepay.fee.domain.model.FeeRule;
+import uz.pulsepay.fee.domain.port.out.FeeRuleRepository;
 import uz.pulsepay.ledger.domain.port.in.PostLedgerEntriesPort;
 import uz.pulsepay.limit.domain.port.in.IncrementLimitUsagePort;
 import uz.pulsepay.network.domain.port.in.ExecuteCardTransferPort;
+import uz.pulsepay.shared.domain.Money;
 import uz.pulsepay.shared.exception.DomainException;
 import uz.pulsepay.shared.exception.NotFoundException;
 import uz.pulsepay.transfer.domain.model.*;
@@ -33,6 +37,7 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
     private final PostLedgerEntriesPort postLedgerEntriesPort;
     private final IncrementLimitUsagePort incrementLimitUsagePort;
     private final EvaluateComplianceFlagsPort evaluateComplianceFlagsPort;
+    private final FeeRuleRepository feeRuleRepository;
 
     public ConfirmTransferOtpUseCase(
             TransferRepository transferRepository,
@@ -41,7 +46,8 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
             ExecuteCardTransferPort executeCardTransferPort,
             PostLedgerEntriesPort postLedgerEntriesPort,
             IncrementLimitUsagePort incrementLimitUsagePort,
-            EvaluateComplianceFlagsPort evaluateComplianceFlagsPort) {
+            EvaluateComplianceFlagsPort evaluateComplianceFlagsPort,
+            FeeRuleRepository feeRuleRepository) {
         this.transferRepository = transferRepository;
         this.participantRepository = participantRepository;
         this.historyRepository = historyRepository;
@@ -49,6 +55,7 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
         this.postLedgerEntriesPort = postLedgerEntriesPort;
         this.incrementLimitUsagePort = incrementLimitUsagePort;
         this.evaluateComplianceFlagsPort = evaluateComplianceFlagsPort;
+        this.feeRuleRepository = feeRuleRepository;
     }
 
     @Override
@@ -80,14 +87,35 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
                 .findByTransferIdAndRole(transferId, ParticipantRole.RECIPIENT)
                 .orElseThrow(() -> new DomainException("Recipient participant not found"));
 
+        // Reload fee rule to determine fee_payer and fee_recipient (needed for debit routing)
+        FeeRule appliedRule = transfer.appliedFeeRuleId() != null
+                ? feeRuleRepository.findById(transfer.appliedFeeRuleId()).orElse(null)
+                : null;
+
+        FeePayer feePayer = appliedRule != null ? appliedRule.feePayer() : FeePayer.SENDER;
+        String feeRecipient = appliedRule != null ? appliedRule.feeRecipient().name() : "PLATFORM";
+
+        // Compute debit (sender) and credit (recipient) amounts based on fee_payer
+        Money debitAmount;
+        if (feePayer == FeePayer.SENDER) {
+            debitAmount = transfer.amount().add(transfer.feeAmount());
+        } else {
+            log.warn("Non-sender fee_payer '{}' not yet fully routed for transfer {}; sender debited principal only",
+                     feePayer, transferId);
+            debitAmount = transfer.amount();
+        }
+        Money creditAmount = transfer.amount(); // recipient always receives principal in Stage 1
+
         // Execute network transfer
         String routeCode = transfer.appliedRouteId() != null ? transfer.appliedRouteId().toString() : "default";
-        log.debug("Executing network transfer: transferId={}, route={}", transferId, routeCode);
+        log.debug("Executing network transfer: transferId={}, route={}, debit={}, credit={}",
+                  transferId, routeCode, debitAmount, creditAmount);
         executeCardTransferPort.execute(
                 transferId,
                 sender.instrumentId(),
                 recipient.instrumentId(),
-                transfer.amount(),
+                debitAmount,
+                creditAmount,
                 routeCode);
         log.debug("Network transfer executed: transferId={}", transferId);
 
@@ -97,7 +125,8 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
                 transfer.amount(),
                 transfer.feeAmount(),
                 sender.instrumentType().name().toLowerCase(),
-                recipient.instrumentType().name().toLowerCase());
+                recipient.instrumentType().name().toLowerCase(),
+                feeRecipient);
         log.debug("Ledger entries posted: transferId={}, amount={}, fee={}", transferId, transfer.amount(), transfer.feeAmount());
 
         // Increment limit counters

@@ -1,0 +1,63 @@
+databaseChangeLog:
+
+  # ── Composite index to support the fee resolver WHERE clause ─────────────────
+  - changeSet:
+      id: 016-fee-rules-resolver-index
+      author: pulsepay
+      changes:
+        - createIndex:
+            tableName: fee_rules
+            indexName: idx_fee_rules_resolver
+            columns:
+              - column:
+                  name: transfer_type_id
+              - column:
+                  name: is_active
+              - column:
+                  name: effective_from
+              - column:
+                  name: effective_to
+              - column:
+                  name: source_network
+              - column:
+                  name: destination_network
+
+  # ── FK: transfers.applied_fee_rule_id → fee_rules.id (RESTRICT) ─────────────
+  # Prevents deletion of any fee_rules row referenced by a historical transfer,
+  # enforcing the immutability guarantee defined in the fee engine plan §3.5.
+  - changeSet:
+      id: 016-transfers-applied-fee-rule-fk
+      author: pulsepay
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: transfers
+            baseColumnNames: applied_fee_rule_id
+            referencedTableName: fee_rules
+            referencedColumnNames: id
+            constraintName: fk_transfers_applied_fee_rule
+            onDelete: RESTRICT
+
+  # ── Admin attribution columns on fee_rules ───────────────────────────────────
+  # Both nullable so existing seeded rows (created without an admin actor) are
+  # not rejected.  updated_by_admin_id has no FK to avoid cascade issues on admin
+  # deactivation; created_by_admin_id carries the auditable FK.
+  - changeSet:
+      id: 016-fee-rules-admin-attribution
+      author: pulsepay
+      changes:
+        - addColumn:
+            tableName: fee_rules
+            columns:
+              - column:
+                  name: created_by_admin_id
+                  type: UUID
+              - column:
+                  name: updated_by_admin_id
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: fee_rules
+            baseColumnNames: created_by_admin_id
+            referencedTableName: admins
+            referencedColumnNames: id
+            constraintName: fk_fee_rules_created_by
+            onDelete: SET NULL

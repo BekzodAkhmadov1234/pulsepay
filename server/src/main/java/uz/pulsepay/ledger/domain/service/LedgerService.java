@@ -1,5 +1,6 @@
 package uz.pulsepay.ledger.domain.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uz.pulsepay.ledger.domain.model.EntryDirection;
 import uz.pulsepay.ledger.domain.model.LedgerAccount;
@@ -13,14 +14,18 @@ import uz.pulsepay.shared.domain.Money;
 import uz.pulsepay.shared.exception.DomainException;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Sole writer to the ledger. Enforces the double-entry invariant (Risk #1):
  * sum of debits must equal sum of credits within each ledger transaction.
+ *
+ * Posts two separate LedgerTransaction rows per transfer confirm:
+ *   1) Transfer txn (entry_type_id=1): DEBIT source_clearing / CREDIT dest_clearing
+ *   2) Fee txn    (entry_type_id=2): DEBIT source_clearing / CREDIT fee_revenue  (only if fee > 0)
  */
+@Slf4j
 @Service
 public class LedgerService implements PostLedgerEntriesPort {
 
@@ -38,49 +43,55 @@ public class LedgerService implements PostLedgerEntriesPort {
 
     @Override
     public void postTransferEntries(UUID transferId, Money amount, Money feeAmount,
-                                    String sourceNetwork, String destNetwork) {
+                                    String sourceNetwork, String destNetwork, String feeRecipient) {
         LedgerAccount sourceClearing = findAccount(sourceNetwork + "_clearing");
-        LedgerAccount destClearing = findAccount(destNetwork + "_clearing");
-        LedgerAccount feeRevenue = findAccount("fee_revenue");
+        LedgerAccount destClearing   = findAccount(destNetwork   + "_clearing");
 
-        // Ledger transaction record
-        LedgerTransaction txn = new LedgerTransaction(
+        // ── Transaction 1: principal transfer (entry_type_id=1) ──────────────
+        LedgerTransaction transferTxn = new LedgerTransaction(
                 UUID.randomUUID(), transferId, "posted",
-                transferId.toString() + "-transfer",
+                transferId + "-transfer",
                 1, // entry_type_id=1 → "transfer"
                 Instant.now(), Instant.now(), null);
-        ledgerTransactionRepository.save(txn);
+        ledgerTransactionRepository.save(transferTxn);
 
-        List<LedgerEntry> entries = new ArrayList<>();
-        long totalDebit = 0;
-        long totalCredit = 0;
+        ledgerEntryRepository.saveAll(List.of(
+                entry(transferTxn.id(), sourceClearing.id(), EntryDirection.DEBIT,  amount.amount(), amount.currency().name()),
+                entry(transferTxn.id(), destClearing.id(),   EntryDirection.CREDIT, amount.amount(), amount.currency().name())
+        ));
 
-        // Principal: debit source clearing, credit dest clearing
-        entries.add(entry(txn.id(), sourceClearing.id(), EntryDirection.DEBIT, amount.amount(), amount.currency().name()));
-        totalDebit += amount.amount();
-        entries.add(entry(txn.id(), destClearing.id(), EntryDirection.CREDIT, amount.amount(), amount.currency().name()));
-        totalCredit += amount.amount();
+        // ── Balance updates for principal ─────────────────────────────────────
+        // source_clearing decreases (negative increment = debit on a credit-normal account)
+        ledgerAccountRepository.incrementPostedBalance(sourceClearing.id(), -amount.amount());
+        ledgerAccountRepository.incrementPostedBalance(destClearing.id(),    amount.amount());
 
-        // Fee: debit source clearing, credit fee_revenue
+        // ── Transaction 2: fee revenue (entry_type_id=2) — only if fee > 0 ──
         if (feeAmount.amount() > 0) {
-            entries.add(entry(txn.id(), sourceClearing.id(), EntryDirection.DEBIT, feeAmount.amount(), feeAmount.currency().name()));
-            totalDebit += feeAmount.amount();
-            entries.add(entry(txn.id(), feeRevenue.id(), EntryDirection.CREDIT, feeAmount.amount(), feeAmount.currency().name()));
-            totalCredit += feeAmount.amount();
-        }
+            LedgerAccount feeAccount = resolveFeeAccount(feeRecipient, transferId);
 
-        if (totalDebit != totalCredit) {
-            throw new DomainException("Double-entry invariant violated: debit=" + totalDebit + " credit=" + totalCredit);
-        }
+            LedgerTransaction feeTxn = new LedgerTransaction(
+                    UUID.randomUUID(), transferId, "posted",
+                    transferId + "-fee",
+                    2, // entry_type_id=2 → "fee"
+                    Instant.now(), Instant.now(), null);
+            ledgerTransactionRepository.save(feeTxn);
 
-        ledgerEntryRepository.saveAll(entries);
+            ledgerEntryRepository.saveAll(List.of(
+                    entry(feeTxn.id(), sourceClearing.id(), EntryDirection.DEBIT,  feeAmount.amount(), feeAmount.currency().name()),
+                    entry(feeTxn.id(), feeAccount.id(),     EntryDirection.CREDIT, feeAmount.amount(), feeAmount.currency().name())
+            ));
 
-        // Atomic SQL increments (Risk #2)
-        ledgerAccountRepository.incrementPostedBalance(sourceClearing.id(), -(amount.amount() + feeAmount.amount()));
-        ledgerAccountRepository.incrementPostedBalance(destClearing.id(), amount.amount());
-        if (feeAmount.amount() > 0) {
-            ledgerAccountRepository.incrementPostedBalance(feeRevenue.id(), feeAmount.amount());
+            ledgerAccountRepository.incrementPostedBalance(sourceClearing.id(), -feeAmount.amount());
+            ledgerAccountRepository.incrementPostedBalance(feeAccount.id(),      feeAmount.amount());
         }
+    }
+
+    private LedgerAccount resolveFeeAccount(String feeRecipient, UUID transferId) {
+        if (!"PLATFORM".equalsIgnoreCase(feeRecipient)) {
+            log.warn("Non-platform fee recipient '{}' not yet routed for transfer {}; crediting fee_revenue",
+                     feeRecipient, transferId);
+        }
+        return findAccount("fee_revenue");
     }
 
     private LedgerAccount findAccount(String code) {

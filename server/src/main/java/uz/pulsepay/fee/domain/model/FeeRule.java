@@ -22,5 +22,8 @@ public record FeeRule(
         Instant effectiveTo,
         Integer transferTypeId,
         FeePayer feePayer,
-        FeeRecipient feeRecipient
+        FeeRecipient feeRecipient,
+        Instant createdAt,
+        UUID createdByAdminId,
+        UUID updatedByAdminId
 ) {}

@@ -14,7 +14,11 @@ function handleLogout() {
 
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header v-if="!route.meta.authLayout" elevated class="bg-white text-dark">
+    <q-header
+      v-if="!route.meta.authLayout && !route.meta.requiresAdmin && !route.meta.adminGuestOnly"
+      elevated
+      class="bg-white text-dark"
+    >
       <q-toolbar style="max-width: 1024px; margin: 0 auto; width: 100%">
         <RouterLink
           to="/"

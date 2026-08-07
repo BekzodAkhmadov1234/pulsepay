@@ -88,6 +88,31 @@ class ArchitectureTest {
     }
 
     @Test
+    void stage1_fee_must_not_import_business() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.fee..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
+        rule.check(importedClasses);
+    }
+
+    @Test
+    void stage1_fee_must_not_import_settlement() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.fee..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.settlement..");
+        rule.check(importedClasses);
+    }
+
+    @Test
+    void ledger_must_not_import_fee() {
+        // LedgerService accepts feeRecipient as String; no direct fee-module coupling
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.ledger..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.fee..");
+        rule.check(importedClasses);
+    }
+
+    @Test
     void stage1_limit_must_not_import_merchant() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage("uz.pulsepay.limit..")

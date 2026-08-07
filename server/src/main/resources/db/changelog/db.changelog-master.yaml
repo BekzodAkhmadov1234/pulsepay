@@ -61,4 +61,10 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/seed/s07-regulatory-params.yaml
   - include:
+      file: db/changelog/changes/stage-1/016-fee-engine-additive.yaml
+  - include:
       file: db/changelog/changes/seed/s08-operational-seed-data.yaml
+  - include:
+      file: db/changelog/changes/seed/s09-fee-rules-realistic.yaml
+  - include:
+      file: db/changelog/changes/seed/s10-admin-seed.yaml

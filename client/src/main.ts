@@ -9,6 +9,7 @@ import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import App from './App.vue';
 import router from './router';
 import { useAuthStore } from './stores/auth';
+import { useAdminAuthStore } from './stores/adminAuth';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,7 +37,8 @@ app.use(Quasar, {
   },
 });
 
-// Restore auth session from localStorage before first render
+// Restore auth sessions from localStorage before first render
 useAuthStore().fetchCurrentUser();
+useAdminAuthStore().fetchCurrentAdmin();
 
 app.mount('#app');

@@ -3,6 +3,7 @@ package uz.pulsepay.fee.domain.port.in;
 import uz.pulsepay.fee.domain.model.FeeRule;
 import uz.pulsepay.shared.domain.Money;
 
+import java.time.Instant;
 import java.util.Optional;
 
 public interface CalculateFeePort {
@@ -11,7 +12,8 @@ public interface CalculateFeePort {
      * Returns empty if no fee applies (zero-fee P2P promo, etc.).
      */
     Optional<FeeResult> calculate(Money amount, int transferTypeId,
-                                  String sourceNetwork, String destNetwork);
+                                  String sourceNetwork, String destNetwork,
+                                  String currencyCode, Instant occurringAt);
 
     record FeeResult(Money fee, FeeRule appliedRule) {}
 }

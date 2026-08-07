@@ -1,0 +1,20 @@
+databaseChangeLog:
+
+  # ── Dev admin account ─────────────────────────────────────────────────────────
+  # DEV ONLY — do NOT apply to production.
+  # Credentials: email=admin@pulsepay.uz  password=password
+  # password_hash is a BCrypt(cost=10) hash of the literal string "password".
+  # To generate a new hash: new BCryptPasswordEncoder().encode("yourPassword")
+  - changeSet:
+      id: s10-admin-super
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: admins
+            columns:
+              - column: { name: id,            value: "10000000-0000-0000-0000-000000000010" }
+              - column: { name: full_name,      value: "Platform Admin" }
+              - column: { name: email,          value: "admin@pulsepay.uz" }
+              - column: { name: password_hash,  value: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi" }
+              - column: { name: role,           value: "super_admin" }
+              - column: { name: status,         value: "active" }

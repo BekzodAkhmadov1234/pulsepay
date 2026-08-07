@@ -63,6 +63,9 @@ public class JwtService {
     /** Admin role string embedded in admin tokens. */
     public static final String CLAIM_ROLE      = "role";
 
+    /** Admin email embedded in admin tokens (for UI display only). */
+    public static final String CLAIM_EMAIL     = "email";
+
     public static final String TYPE_USER  = "user";
     public static final String TYPE_ADMIN = "admin";
 
@@ -114,14 +117,15 @@ public class JwtService {
      * @param role    the admin's role string (stored as-is in the {@code role} claim)
      * @return a signed, compact JWT string
      */
-    public String generateAdminToken(UUID adminId, String role) {
+    public String generateAdminToken(UUID adminId, String role, String email) {
         Date now    = new Date();
         Date expiry = new Date(now.getTime() + properties.getAdminExpirySeconds() * 1_000L);
 
         return Jwts.builder()
                 .subject(adminId.toString())
-                .claim(CLAIM_TYPE, TYPE_ADMIN)
-                .claim(CLAIM_ROLE, role)
+                .claim(CLAIM_TYPE,  TYPE_ADMIN)
+                .claim(CLAIM_ROLE,  role)
+                .claim(CLAIM_EMAIL, email)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey)

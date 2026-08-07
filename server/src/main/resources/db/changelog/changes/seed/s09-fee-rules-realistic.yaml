@@ -1,0 +1,161 @@
+databaseChangeLog:
+
+  # ── Realistic P2P fee rules (layered on top of s08 zero-fee stub) ─────────────
+  # Rule ...0101 (zero-fee P2P stub) already exists from s08-operational-seed-data.yaml.
+  # This file adds rules ...0102–...0106 for realistic coverage of all test scenarios.
+  # Rules at priority=50 have mutually exclusive (source_network, destination_network)
+  # combinations, so no single transfer matches more than one at the same priority.
+
+  # ── Rule 0102: P2P catch-all percentage (fallback for any network pair) ───────
+  - changeSet:
+      id: s09-fee-rule-p2p-catchall
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                  value: "00000000-0000-0000-0000-000000000102" }
+              - column: { name: name,                 value: "P2P catch-all 1% (floor 5 UZS, cap 1000 UZS)" }
+              - column: { name: transfer_type_id,     valueNumeric: 1 }
+              - column: { name: fee_type,             value: "percentage" }
+              - column: { name: percentage_bps,       valueNumeric: 100 }
+              - column: { name: min_fee_amount,       valueNumeric: 500 }
+              - column: { name: max_fee_amount,       valueNumeric: 100000 }
+              - column: { name: min_amount,           valueNumeric: 0 }
+              - column: { name: currency_code,        value: "UZS" }
+              - column: { name: priority,             valueNumeric: 200 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: fee_payer,            value: "sender" }
+              - column: { name: fee_recipient,        value: "platform" }
+              - column: { name: effective_from,       valueComputed: "NOW()" }
+
+  # ── Rule 0103: P2P same-network UzCard→UzCard (0.65%, no floor/cap) ──────────
+  - changeSet:
+      id: s09-fee-rule-p2p-uzcard-uzcard
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                    value: "00000000-0000-0000-0000-000000000103" }
+              - column: { name: name,                   value: "P2P UzCard→UzCard 0.65%" }
+              - column: { name: transfer_type_id,       valueNumeric: 1 }
+              - column: { name: source_network,         value: "uzcard" }
+              - column: { name: destination_network,    value: "uzcard" }
+              - column: { name: fee_type,               value: "percentage" }
+              - column: { name: percentage_bps,         valueNumeric: 65 }
+              - column: { name: min_amount,             valueNumeric: 0 }
+              - column: { name: currency_code,          value: "UZS" }
+              - column: { name: priority,               valueNumeric: 50 }
+              - column: { name: is_active,              valueBoolean: true }
+              - column: { name: fee_payer,              value: "sender" }
+              - column: { name: fee_recipient,          value: "platform" }
+              - column: { name: effective_from,         valueComputed: "NOW()" }
+
+  # ── Rule 0104: P2P cross-network UzCard→Humo (1.5%, floor 5 UZS, cap 1500 UZS) ─
+  - changeSet:
+      id: s09-fee-rule-p2p-uzcard-humo
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                    value: "00000000-0000-0000-0000-000000000104" }
+              - column: { name: name,                   value: "P2P UzCard→Humo 1.5% (floor 5 UZS, cap 1500 UZS)" }
+              - column: { name: transfer_type_id,       valueNumeric: 1 }
+              - column: { name: source_network,         value: "uzcard" }
+              - column: { name: destination_network,    value: "humo" }
+              - column: { name: fee_type,               value: "percentage" }
+              - column: { name: percentage_bps,         valueNumeric: 150 }
+              - column: { name: min_fee_amount,         valueNumeric: 500 }
+              - column: { name: max_fee_amount,         valueNumeric: 150000 }
+              - column: { name: min_amount,             valueNumeric: 0 }
+              - column: { name: currency_code,          value: "UZS" }
+              - column: { name: priority,               valueNumeric: 50 }
+              - column: { name: is_active,              valueBoolean: true }
+              - column: { name: fee_payer,              value: "sender" }
+              - column: { name: fee_recipient,          value: "platform" }
+              - column: { name: effective_from,         valueComputed: "NOW()" }
+
+  # ── Rule 0105: P2P tiered Humo→Humo (3 tiers, capped at 2000 UZS) ───────────
+  - changeSet:
+      id: s09-fee-rule-p2p-humo-humo-tiered
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                    value: "00000000-0000-0000-0000-000000000105" }
+              - column: { name: name,                   value: "P2P Humo→Humo tiered (cap 2000 UZS)" }
+              - column: { name: transfer_type_id,       valueNumeric: 1 }
+              - column: { name: source_network,         value: "humo" }
+              - column: { name: destination_network,    value: "humo" }
+              - column: { name: fee_type,               value: "tiered" }
+              - column: { name: max_fee_amount,         valueNumeric: 200000 }
+              - column: { name: min_amount,             valueNumeric: 0 }
+              - column: { name: currency_code,          value: "UZS" }
+              - column: { name: priority,               valueNumeric: 50 }
+              - column: { name: is_active,              valueBoolean: true }
+              - column: { name: fee_payer,              value: "sender" }
+              - column: { name: fee_recipient,          value: "platform" }
+              - column: { name: effective_from,         valueComputed: "NOW()" }
+
+  # Tier rows for rule 0105
+  - changeSet:
+      id: s09-tier-humo-humo-1
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rule_tiers
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000001051" }
+              - column: { name: fee_rule_id,       value: "00000000-0000-0000-0000-000000000105" }
+              - column: { name: tier_min_amount,   valueNumeric: 0 }
+              - column: { name: tier_max_amount,   valueNumeric: 999999 }
+              - column: { name: fixed_amount,      valueNumeric: 500 }
+
+  - changeSet:
+      id: s09-tier-humo-humo-2
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rule_tiers
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000001052" }
+              - column: { name: fee_rule_id,       value: "00000000-0000-0000-0000-000000000105" }
+              - column: { name: tier_min_amount,   valueNumeric: 1000000 }
+              - column: { name: tier_max_amount,   valueNumeric: 9999999 }
+              - column: { name: percentage_bps,    valueNumeric: 50 }
+
+  - changeSet:
+      id: s09-tier-humo-humo-3
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rule_tiers
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000001053" }
+              - column: { name: fee_rule_id,       value: "00000000-0000-0000-0000-000000000105" }
+              - column: { name: tier_min_amount,   valueNumeric: 10000000 }
+              - column: { name: percentage_bps,    valueNumeric: 100 }
+
+  # ── Rule 0106: C2B merchant-pays stub (inactive — activates in Stage 2) ───────
+  - changeSet:
+      id: s09-fee-rule-c2b-merchant-pays
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                    value: "00000000-0000-0000-0000-000000000106" }
+              - column: { name: name,                   value: "C2B merchant-pays 0.65% (Stage 2)" }
+              - column: { name: transfer_type_id,       valueNumeric: 3 }
+              - column: { name: fee_type,               value: "percentage" }
+              - column: { name: percentage_bps,         valueNumeric: 65 }
+              - column: { name: min_amount,             valueNumeric: 0 }
+              - column: { name: currency_code,          value: "UZS" }
+              - column: { name: priority,               valueNumeric: 100 }
+              - column: { name: is_active,              valueBoolean: false }
+              - column: { name: fee_payer,              value: "merchant" }
+              - column: { name: fee_recipient,          value: "platform" }
+              - column: { name: effective_from,         valueComputed: "NOW()" }

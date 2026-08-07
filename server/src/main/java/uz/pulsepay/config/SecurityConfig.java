@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/admin/v1/auth/login").permitAll()
                         .anyRequest().hasRole("ADMIN"))
                 .addFilterBefore(new AdminJwtFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class);

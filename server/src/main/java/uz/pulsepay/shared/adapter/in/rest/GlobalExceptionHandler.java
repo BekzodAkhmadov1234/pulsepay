@@ -12,6 +12,7 @@ import uz.pulsepay.identity.domain.exception.AccountInactiveException;
 import uz.pulsepay.identity.domain.exception.DuplicatePhoneException;
 import uz.pulsepay.identity.domain.exception.InvalidOtpException;
 import uz.pulsepay.shared.adapter.in.rest.dto.ErrorResponse;
+import uz.pulsepay.shared.exception.ConflictException;
 import uz.pulsepay.shared.exception.DomainException;
 import uz.pulsepay.shared.exception.IdempotencyConflictException;
 import uz.pulsepay.shared.exception.NotFoundException;
@@ -53,6 +54,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicatePhoneException.class)
     public ResponseEntity<ErrorResponse> handleDuplicatePhone(DuplicatePhoneException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // ── 409 Conflict — general business conflict (fee rule overlap, etc.) ─────
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage());
     }
 

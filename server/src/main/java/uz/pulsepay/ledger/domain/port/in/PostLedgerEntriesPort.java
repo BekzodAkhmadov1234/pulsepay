@@ -11,15 +11,17 @@ import java.util.UUID;
 public interface PostLedgerEntriesPort {
 
     /**
-     * Posts a double-entry transfer journal: debit clearing account, credit clearing account,
-     * plus a fee revenue entry if feeAmount > 0.
+     * Posts two double-entry journal transactions:
+     * 1) Transfer txn (entry_type=1): DEBIT source_clearing / CREDIT dest_clearing
+     * 2) Fee txn (entry_type=2): DEBIT source_clearing / CREDIT fee_revenue  (only if feeAmount > 0)
      *
-     * @param transferId  the business-level transfer this ledger transaction backs
-     * @param amount      principal amount (debit sender clearing, credit recipient clearing)
-     * @param feeAmount   fee amount (debit sender clearing, credit fee_revenue)
-     * @param sourceNetwork  "uzcard" or "humo"
-     * @param destNetwork    "uzcard" or "humo"
+     * @param transferId    the business-level transfer this ledger transaction backs
+     * @param amount        principal amount
+     * @param feeAmount     fee amount (zero means no fee txn is posted)
+     * @param sourceNetwork "uzcard" or "humo"
+     * @param destNetwork   "uzcard" or "humo"
+     * @param feeRecipient  "PLATFORM", "NETWORK", or "BANK" — controls which account receives the fee
      */
     void postTransferEntries(UUID transferId, Money amount, Money feeAmount,
-                             String sourceNetwork, String destNetwork);
+                             String sourceNetwork, String destNetwork, String feeRecipient);
 }

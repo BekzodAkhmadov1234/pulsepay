@@ -30,7 +30,7 @@ public class NetworkTransactionService implements ExecuteCardTransferPort {
 
     @Override
     public void execute(UUID transferId, UUID senderCardId, UUID recipientCardId,
-                        Money amount, String routeCode) {
+                        Money debitAmount, Money creditAmount, String routeCode) {
         // Resolve which gateway to use from the route code prefix
         String network = routeCode.startsWith("uzcard") ? "uzcard" : "humo";
         CardNetworkGateway gateway = gatewaysByCode.get(network);
@@ -38,14 +38,14 @@ public class NetworkTransactionService implements ExecuteCardTransferPort {
             throw new DomainException("No gateway available for network: " + network);
         }
 
-        gateway.debitCard(senderCardId, amount, transferId.toString() + "-debit");
+        gateway.debitCard(senderCardId, debitAmount, transferId.toString() + "-debit");
         transactionRepository.save(new CardTransaction(
                 UUID.randomUUID(), transferId, 1, senderCardId,
-                amount.amount(), null, null, "success", Instant.now(), null));
+                debitAmount.amount(), null, null, "success", Instant.now(), null));
 
-        gateway.creditCard(recipientCardId, amount, transferId.toString() + "-credit");
+        gateway.creditCard(recipientCardId, creditAmount, transferId.toString() + "-credit");
         transactionRepository.save(new CardTransaction(
                 UUID.randomUUID(), transferId, 2, recipientCardId,
-                amount.amount(), null, null, "success", Instant.now(), null));
+                creditAmount.amount(), null, null, "success", Instant.now(), null));
     }
 }

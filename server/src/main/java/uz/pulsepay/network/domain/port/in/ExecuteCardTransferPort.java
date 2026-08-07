@@ -6,15 +6,16 @@ import java.util.UUID;
 
 public interface ExecuteCardTransferPort {
     /**
-     * Executes both the debit leg (sender's card) and credit leg (recipient's card)
+     * Executes the debit leg (sender's card) and credit leg (recipient's card)
      * via the appropriate card network gateway.
      *
-     * @param transferId parent transfer ID
-     * @param senderCardId sender instrument (card)
+     * @param transferId      parent transfer ID
+     * @param senderCardId    sender instrument (card)
      * @param recipientCardId recipient instrument (card)
-     * @param amount principal amount
-     * @param routeCode which network route to use
+     * @param debitAmount     total amount debited from sender (principal + fee when sender-pays)
+     * @param creditAmount    amount credited to recipient (principal only)
+     * @param routeCode       which network route to use
      */
     void execute(UUID transferId, UUID senderCardId, UUID recipientCardId,
-                 Money amount, String routeCode);
+                 Money debitAmount, Money creditAmount, String routeCode);
 }

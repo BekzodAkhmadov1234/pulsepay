@@ -126,7 +126,13 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
         // 8. Fee calculation (senderCardNetwork / recipientCardNetwork are "uzcard" or "humo")
         String srcNetwork = senderCardNetwork;
         String dstNetwork = recipientCardNetwork;
-        var feeResult = calculateFeePort.calculate(amount, transferTypeId, srcNetwork, dstNetwork);
+        Instant now = Instant.now();
+        var feeResult = calculateFeePort.calculate(amount, transferTypeId, srcNetwork, dstNetwork,
+                amount.currency().name(), now);
+        if (feeResult.isEmpty()) {
+            log.warn("No fee rule matched for transfer: transferTypeId={}, src={}, dst={}, amount={}",
+                    transferTypeId, srcNetwork, dstNetwork, amount);
+        }
         Money feeAmount = feeResult.map(r -> r.fee()).orElse(Money.ofTiyin(0, CurrencyCode.UZS));
         UUID appliedFeeRuleId = feeResult.map(r -> r.appliedRule().id()).orElse(null);
         log.debug("Fee calculated: fee={}, appliedRuleId={}, route={}->{}", feeAmount, appliedFeeRuleId, srcNetwork, dstNetwork);

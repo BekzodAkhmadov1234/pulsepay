@@ -22,9 +22,9 @@ async function handleLogin() {
     await router.push(redirect);
   } catch (err) {
     if (err instanceof ApiError) {
-      serverError.value = err.status === 401 ? 'Invalid email or password.' : err.message;
+      serverError.value = err.status === 401 ? "Noto'g'ri email yoki parol." : err.message;
     } else {
-      serverError.value = 'Something went wrong. Please try again.';
+      serverError.value = "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.";
     }
   }
 }
@@ -38,7 +38,7 @@ async function handleLogin() {
           Pulse<span class="text-primary">Pay</span>
           <span class="text-caption text-grey-6 q-ml-sm">Admin</span>
         </div>
-        <p class="text-body2 text-grey-6 q-mt-xs q-mb-none">Sign in to the admin portal</p>
+        <p class="text-body2 text-grey-6 q-mt-xs q-mb-none">Admin paneliga kirish</p>
       </div>
 
       <q-form class="column q-gutter-y-md" @submit.prevent="handleLogin">
@@ -61,7 +61,7 @@ async function handleLogin() {
         <q-input
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          label="Password"
+          label="Parol"
           outlined
           autocomplete="off"
           :disable="adminAuth.isLoading"
@@ -77,7 +77,7 @@ async function handleLogin() {
 
         <q-btn
           type="submit"
-          label="Sign in"
+          label="Kirish"
           color="primary"
           unelevated
           class="full-width"

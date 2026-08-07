@@ -58,7 +58,7 @@ async function handleLookup() {
 
   if (lookupMode.value === 'phone') {
     if (phoneDigits.value.length !== 9) {
-      lookupError.value = 'Enter 9 digits after +998.';
+      lookupError.value = '+998 dan keyin 9 ta raqam kiriting.';
       return;
     }
     isLooking.value = true;
@@ -70,15 +70,15 @@ async function handleLookup() {
     } catch (err) {
       lookupError.value =
         err instanceof ApiError && err.status === 404
-          ? 'No account found for that phone number.'
-          : 'Lookup failed. Please try again.';
+          ? 'Bu telefon raqami uchun hisob topilmadi.'
+          : "Qidiruv muvaffaqiyatsiz. Iltimos, qayta urinib ko'ring.";
     } finally {
       isLooking.value = false;
     }
   } else {
     const digits = cardNumber.value.replace(/\D/g, '');
     if (digits.length !== 16) {
-      lookupError.value = 'Enter a 16-digit card number.';
+      lookupError.value = '16 ta raqamli karta raqamini kiriting.';
       return;
     }
     isLooking.value = true;
@@ -93,8 +93,8 @@ async function handleLookup() {
     } catch (err) {
       lookupError.value =
         err instanceof ApiError && err.status === 404
-          ? 'No card found for that number.'
-          : 'Lookup failed. Please try again.';
+          ? 'Bu raqam uchun karta topilmadi.'
+          : "Qidiruv muvaffaqiyatsiz. Iltimos, qayta urinib ko'ring.";
     } finally {
       isLooking.value = false;
     }
@@ -103,11 +103,12 @@ async function handleLookup() {
 
 function validate(): boolean {
   fieldErrors.value = {};
-  if (!senderCardId.value) fieldErrors.value.senderCard = 'Select your card.';
-  if (!recipientCardId.value) fieldErrors.value.recipientCard = 'Select recipient card.';
-  if (!amountUzs.value || amountUzs.value <= 0) fieldErrors.value.amount = 'Enter a valid amount.';
+  if (!senderCardId.value) fieldErrors.value.senderCard = 'Kartangizni tanlang.';
+  if (!recipientCardId.value) fieldErrors.value.recipientCard = 'Qabul qiluvchi kartasini tanlang.';
+  if (!amountUzs.value || amountUzs.value <= 0)
+    fieldErrors.value.amount = "To'g'ri summani kiriting.";
   else if (amountUzs.value > 30_000_000)
-    fieldErrors.value.amount = 'Maximum 30 000 000 UZS per transfer.';
+    fieldErrors.value.amount = "O'tkazma uchun maksimum 30 000 000 UZS.";
   return Object.keys(fieldErrors.value).length === 0;
 }
 
@@ -132,7 +133,10 @@ async function handleSend() {
     });
     router.push('/transfers');
   } catch (err) {
-    sendError.value = err instanceof ApiError ? err.message : 'Transfer failed. Please try again.';
+    sendError.value =
+      err instanceof ApiError
+        ? err.message
+        : "O'tkazma muvaffaqiyatsiz. Iltimos, qayta urinib ko'ring.";
   }
 }
 
@@ -147,13 +151,15 @@ function networkLabel(network: string | null) {
   <q-page class="q-pa-lg">
     <div style="max-width: 600px; margin: 0 auto" class="column q-gutter-y-lg">
       <div>
-        <h1 class="text-h5 text-weight-bold q-my-none">Send Money</h1>
-        <p class="text-caption text-grey-6 q-mt-xs q-mb-none">P2P transfer to any PulsePay user</p>
+        <h1 class="text-h5 text-weight-bold q-my-none">Pul o'tkazish</h1>
+        <p class="text-caption text-grey-6 q-mt-xs q-mb-none">
+          Istalgan PulsePay foydalanuvchisiga P2P o'tkazma
+        </p>
       </div>
 
       <!-- Step 1: Your card — always visible so users with multiple cards can choose upfront -->
       <q-card flat bordered class="q-pa-md">
-        <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">Your card</h2>
+        <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">Sizning kartangiz</h2>
 
         <q-select
           v-model="senderCardId"
@@ -163,7 +169,7 @@ function networkLabel(network: string | null) {
               value: c.id,
             }))
           "
-          label="Pay from"
+          label="Qayerdan to'lash"
           outlined
           emit-value
           map-options
@@ -173,7 +179,8 @@ function networkLabel(network: string | null) {
           <template v-if="verifiedCards.length === 0" #no-option>
             <q-item>
               <q-item-section class="text-grey">
-                No verified cards — <router-link to="/cards">add a card</router-link> first.
+                Tasdiqlangan kartalar yo'q — avval
+                <router-link to="/cards">karta qo'shing</router-link>.
               </q-item-section>
             </q-item>
           </template>
@@ -183,14 +190,14 @@ function networkLabel(network: string | null) {
       <!-- Step 2: Recipient lookup -->
       <q-card flat bordered class="q-pa-md">
         <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">
-          Transfer by phone number or card
+          Telefon raqami yoki karta orqali o'tkazma
         </h2>
 
         <q-btn-toggle
           v-model="lookupMode"
           :options="[
-            { label: 'By phone', value: 'phone' },
-            { label: 'By card', value: 'card' },
+            { label: 'Telefon orqali', value: 'phone' },
+            { label: 'Karta orqali', value: 'card' },
           ]"
           unelevated
           no-caps
@@ -207,7 +214,7 @@ function networkLabel(network: string | null) {
               :model-value="phoneDigits"
               type="tel"
               inputmode="tel"
-              label="Recipient phone"
+              label="Qabul qiluvchi telefon raqami"
               outlined
               maxlength="9"
               :error="!!lookupError"
@@ -224,7 +231,7 @@ function networkLabel(network: string | null) {
             <q-input
               v-else
               v-model="cardNumber"
-              label="Card number"
+              label="Karta raqami"
               placeholder="8600 xxxx xxxx xxxx"
               outlined
               maxlength="16"
@@ -240,7 +247,7 @@ function networkLabel(network: string | null) {
               unelevated
               color="primary"
               no-caps
-              label="Find"
+              label="Topish"
               :loading="isLooking"
               @click="handleLookup"
             />
@@ -262,7 +269,7 @@ function networkLabel(network: string | null) {
                 value: c.id,
               }))
             "
-            label="Recipient card"
+            label="Qabul qiluvchi kartasi"
             outlined
             emit-value
             map-options
@@ -274,7 +281,7 @@ function networkLabel(network: string | null) {
 
       <!-- Step 3: Amount + send (shown after recipient found) -->
       <q-card v-if="recipient" flat bordered class="q-pa-md">
-        <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">Amount</h2>
+        <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">Summa</h2>
 
         <q-banner v-if="sendError" dense rounded class="bg-red-1 text-negative q-mb-md">
           <template #avatar><q-icon name="warning" color="negative" /></template>
@@ -284,7 +291,7 @@ function networkLabel(network: string | null) {
         <div class="column q-gutter-y-md">
           <q-input
             v-model.number="amountUzs"
-            label="Amount (UZS)"
+            label="Summa (UZS)"
             type="number"
             outlined
             :min="1"
@@ -298,12 +305,12 @@ function networkLabel(network: string | null) {
               unelevated
               color="primary"
               no-caps
-              label="Send"
+              label="Jo'natish"
               :loading="transfersStore.isLoading"
               :disable="verifiedCards.length === 0"
               @click="handleSend"
             />
-            <q-btn flat no-caps label="Cancel" to="/" />
+            <q-btn flat no-caps label="Bekor qilish" to="/" />
           </div>
         </div>
       </q-card>

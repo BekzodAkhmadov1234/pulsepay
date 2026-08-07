@@ -66,9 +66,9 @@ function txDate(tx: TransferDto) {
 }
 
 function statusLabel(status: string) {
-  if (status === 'completed') return 'Successful transfer';
-  if (status === 'failed') return 'Failed transfer';
-  if (status === 'processing') return 'Processing';
+  if (status === 'completed') return "Muvaffaqiyatli o'tkazma";
+  if (status === 'failed') return "Muvaffaqiyatsiz o'tkazma";
+  if (status === 'processing') return 'Jarayonda';
   return status;
 }
 
@@ -100,13 +100,13 @@ function txDayKey(tx: TransferDto): string {
 
 function txDayLabel(tx: TransferDto): string {
   const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
-  if (!d) return 'Other';
+  if (!d) return 'Boshqa';
   const today = new Date();
-  if (isSameDay(d, today)) return 'Today';
+  if (isSameDay(d, today)) return 'Bugun';
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(d, yesterday)) return 'Yesterday';
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  if (isSameDay(d, yesterday)) return 'Kecha';
+  return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
 }
 
 const groupedTransfers = computed(() => {
@@ -138,7 +138,7 @@ const groupedTransfers = computed(() => {
             style="cursor: pointer"
             @click="router.push('/cards')"
           >
-            <p class="text-caption text-grey-6 q-mb-xs">Total balance</p>
+            <p class="text-caption text-grey-6 q-mb-xs">Umumiy balans</p>
             <div class="row items-center no-wrap">
               <p class="text-h5 text-weight-bold q-my-none col">
                 {{ balanceVisible ? balanceDisplay : '••••• UZS' }}
@@ -163,7 +163,7 @@ const groupedTransfers = computed(() => {
           class="text-caption text-weight-bold text-uppercase text-grey-6 q-mb-sm"
           style="letter-spacing: 0.1em"
         >
-          Transaction history
+          Tranzaksiyalar tarixi
         </p>
 
         <!-- Loading -->
@@ -178,8 +178,10 @@ const groupedTransfers = computed(() => {
         <q-card v-else-if="transfersStore.transfers.length === 0" flat bordered>
           <q-card-section class="column items-center q-pa-xl text-center">
             <q-icon name="show_chart" size="40px" color="grey-4" />
-            <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">No transactions yet</p>
-            <p class="text-caption text-grey-6 q-mb-none">Your payment history will appear here.</p>
+            <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">
+              Hozircha tranzaksiyalar yo'q
+            </p>
+            <p class="text-caption text-grey-6 q-mb-none">To'lov tarixi bu yerda ko'rsatiladi.</p>
           </q-card-section>
         </q-card>
 
@@ -252,14 +254,14 @@ const groupedTransfers = computed(() => {
         <q-list dense class="q-py-sm">
           <q-item>
             <q-item-section>
-              <q-item-label caption>Date</q-item-label>
+              <q-item-label caption>Sana</q-item-label>
               <q-item-label>{{ selectedTx ? txDate(selectedTx) : '—' }}</q-item-label>
             </q-item-section>
           </q-item>
 
           <q-item>
             <q-item-section>
-              <q-item-label caption>Receiver</q-item-label>
+              <q-item-label caption>Qabul qiluvchi</q-item-label>
               <q-item-label>{{ selectedTx?.recipientName || '—' }}</q-item-label>
               <q-item-label caption class="q-mt-xs" style="font-family: monospace">
                 {{ selectedTx?.recipientMaskedPan || '—' }}
@@ -269,7 +271,7 @@ const groupedTransfers = computed(() => {
 
           <q-item>
             <q-item-section>
-              <q-item-label caption>Sender</q-item-label>
+              <q-item-label caption>Jo'natuvchi</q-item-label>
               <q-item-label>{{ selectedTx?.senderName || '—' }}</q-item-label>
               <q-item-label caption class="q-mt-xs" style="font-family: monospace">
                 {{ selectedTx?.senderMaskedPan || '—' }}
@@ -279,7 +281,7 @@ const groupedTransfers = computed(() => {
 
           <q-item>
             <q-item-section>
-              <q-item-label caption>Commission</q-item-label>
+              <q-item-label caption>Komissiya</q-item-label>
               <q-item-label>
                 {{
                   selectedTx?.feeAmountUzs
@@ -292,7 +294,7 @@ const groupedTransfers = computed(() => {
         </q-list>
 
         <q-card-actions align="right" class="q-pb-md q-pr-md">
-          <q-btn flat no-caps label="Close" color="primary" @click="closeDetail" />
+          <q-btn flat no-caps label="Yopish" color="primary" @click="closeDetail" />
         </q-card-actions>
       </q-card>
     </q-dialog>

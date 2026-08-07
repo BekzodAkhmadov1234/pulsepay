@@ -16,19 +16,19 @@ const serverError = ref('');
 const PHONE_RE = /^\+998\d{9}$/;
 
 const features = [
-  'Instant P2P transfers across Uzbekistan',
-  'Merchant payments via UzCard & Humo',
-  'Bank-grade security, CBU licensed',
+  "O'zbekiston bo'ylab tezkor P2P o'tkazmalar",
+  "UzCard va Humo orqali savdogar to'lovlari",
+  'Bank darajasidagi xavfsizlik, MBU litsenziyalangan',
 ];
 
 function validatePhone(): boolean {
   phoneError.value = '';
   if (!phoneDigits.value) {
-    phoneError.value = 'Phone number is required.';
+    phoneError.value = 'Telefon raqami kiritilishi shart.';
     return false;
   }
   if (!PHONE_RE.test(phone.value)) {
-    phoneError.value = 'Enter a valid Uzbekistan number (+998XXXXXXXXX).';
+    phoneError.value = "To'g'ri O'zbekiston raqamini kiriting (+998XXXXXXXXX).";
     return false;
   }
   return true;
@@ -45,14 +45,15 @@ async function handleLogin() {
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 404) {
-        phoneError.value = 'No account found for this number.';
+        phoneError.value = 'Bu raqam uchun hisob topilmadi.';
       } else if (err.status === 403) {
-        serverError.value = 'Account is inactive. Please contact support.';
+        serverError.value =
+          "Hisob faol emas. Iltimos, qo'llab-quvvatlash xizmatiga murojaat qiling.";
       } else {
         serverError.value = err.message;
       }
     } else {
-      serverError.value = 'Something went wrong. Please try again.';
+      serverError.value = "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.";
     }
   }
 }
@@ -74,12 +75,12 @@ function onPhoneInput(val: string | number | null) {
 
       <div class="column q-gutter-y-lg">
         <div class="column q-gutter-y-sm">
-          <p class="brand-tagline">Uzbekistan's payment platform</p>
+          <p class="brand-tagline">O'zbekistonning to'lov platformasi</p>
           <h1 class="text-h4 text-weight-bold text-white q-my-none">
-            Send money<br />anywhere,<br />instantly.
+            Istalgan joyga<br />tez pul<br />o'tkazing.
           </h1>
           <p class="text-body1 text-white q-my-none" style="opacity: 0.72">
-            P2P · C2B · B2B/B2C — all payment rails in one account.
+            P2P · C2B · B2B/B2C — barcha to'lov yo'nalishlari bir hisobda.
           </p>
         </div>
 
@@ -93,7 +94,7 @@ function onPhoneInput(val: string | number | null) {
         </q-list>
       </div>
 
-      <p class="brand-copyright q-mb-none">© 2026 PulsePay · CBU Licensed</p>
+      <p class="brand-copyright q-mb-none">© 2026 PulsePay · MBU Litsenziyalangan</p>
     </aside>
 
     <!-- ── Form panel ────────────────────────────────────────── -->
@@ -105,9 +106,9 @@ function onPhoneInput(val: string | number | null) {
 
       <div class="form-inner">
         <div class="q-mb-lg">
-          <h2 class="text-h5 text-weight-bold text-dark q-my-none">Welcome back</h2>
+          <h2 class="text-h5 text-weight-bold text-dark q-my-none">Xush kelibsiz</h2>
           <p class="text-body2 text-grey-6 q-mt-xs q-mb-none">
-            Enter your registered phone number to log in.
+            Kirish uchun ro'yxatdan o'tgan telefon raqamingizni kiriting.
           </p>
         </div>
 
@@ -123,7 +124,7 @@ function onPhoneInput(val: string | number | null) {
             :model-value="phoneDigits"
             type="tel"
             inputmode="tel"
-            label="Mobile number"
+            label="Telefon raqami"
             outlined
             maxlength="9"
             :error="!!phoneError"
@@ -138,7 +139,7 @@ function onPhoneInput(val: string | number | null) {
 
           <q-btn
             type="submit"
-            label="Log in"
+            label="Kirish"
             color="primary"
             unelevated
             class="full-width"
@@ -150,9 +151,9 @@ function onPhoneInput(val: string | number | null) {
 
         <!-- Footer -->
         <p class="text-center text-body2 text-grey-6 q-mt-xl q-mb-none">
-          Don't have an account?
+          Hisobingiz yo'qmi?
           <RouterLink to="/register" class="text-primary text-weight-semibold">
-            Create one
+            Ro'yxatdan o'ting
           </RouterLink>
         </p>
       </div>

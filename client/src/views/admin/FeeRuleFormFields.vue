@@ -13,7 +13,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
   <div class="column q-gutter-y-sm">
     <q-input
       :model-value="modelValue.name"
-      label="Name *"
+      label="Nomi *"
       outlined
       dense
       @update:model-value="(v) => update('name', String(v ?? ''))"
@@ -23,7 +23,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       <div class="col-6">
         <q-select
           :model-value="modelValue.sourceNetwork"
-          label="Source network"
+          label="Manba tarmog'i"
           outlined
           dense
           clearable
@@ -34,7 +34,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       <div class="col-6">
         <q-select
           :model-value="modelValue.destinationNetwork"
-          label="Dest network"
+          label="Manzil tarmog'i"
           outlined
           dense
           clearable
@@ -49,7 +49,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
         <q-input
           :model-value="modelValue.minAmount"
           type="number"
-          label="Min amount (tiyin)"
+          label="Min summa (tiyin)"
           outlined
           dense
           @update:model-value="(v) => update('minAmount', Number(v))"
@@ -59,7 +59,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
         <q-input
           :model-value="modelValue.maxAmount"
           type="number"
-          label="Max amount (tiyin)"
+          label="Max summa (tiyin)"
           outlined
           dense
           clearable
@@ -72,7 +72,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
         <q-input
           :model-value="modelValue.priority"
           type="number"
-          label="Priority"
+          label="Ustuvorlik"
           outlined
           dense
           @update:model-value="(v) => update('priority', Number(v))"
@@ -82,13 +82,13 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
 
     <q-select
       :model-value="modelValue.feeType"
-      label="Fee type *"
+      label="Komissiya turi *"
       outlined
       dense
       :options="[
-        { label: 'Fixed', value: 'FIXED' },
-        { label: 'Percentage (bps)', value: 'PERCENTAGE' },
-        { label: 'Tiered', value: 'TIERED' },
+        { label: 'Belgilangan', value: 'FIXED' },
+        { label: 'Foizli (bps)', value: 'PERCENTAGE' },
+        { label: 'Bosqichli', value: 'TIERED' },
       ]"
       emit-value
       map-options
@@ -99,7 +99,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       v-if="modelValue.feeType === 'FIXED'"
       :model-value="modelValue.fixedAmount"
       type="number"
-      label="Fixed amount (tiyin) *"
+      label="Belgilangan summa (tiyin) *"
       outlined
       dense
       @update:model-value="(v) => update('fixedAmount', v !== '' && v !== null ? Number(v) : null)"
@@ -109,7 +109,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       <q-input
         :model-value="modelValue.percentageBps"
         type="number"
-        label="Percentage bps (e.g. 100 = 1%) *"
+        label="Foiz (bps) (masalan: 100 = 1%) *"
         outlined
         dense
         @update:model-value="
@@ -121,7 +121,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
           <q-input
             :model-value="modelValue.minFeeAmount"
             type="number"
-            label="Min fee (tiyin)"
+            label="Min komissiya (tiyin)"
             outlined
             dense
             clearable
@@ -134,7 +134,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
           <q-input
             :model-value="modelValue.maxFeeAmount"
             type="number"
-            label="Max fee (tiyin)"
+            label="Max komissiya (tiyin)"
             outlined
             dense
             clearable
@@ -150,7 +150,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       <div class="col-6">
         <q-select
           :model-value="modelValue.feePayer"
-          label="Fee payer"
+          label="Komissiya to'lovchi"
           outlined
           dense
           :options="['SENDER', 'RECIPIENT', 'MERCHANT', 'BUSINESS']"
@@ -162,7 +162,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       <div class="col-6">
         <q-select
           :model-value="modelValue.feeRecipient"
-          label="Fee recipient"
+          label="Komissiya qabul qiluvchi"
           outlined
           dense
           :options="['PLATFORM', 'NETWORK', 'BANK']"
@@ -178,7 +178,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
         <q-input
           :model-value="modelValue.transferTypeId"
           type="number"
-          label="Transfer type ID (1=P2P)"
+          label="O'tkazma turi ID (1=P2P)"
           outlined
           dense
           @update:model-value="
@@ -189,7 +189,7 @@ function update<K extends keyof CreateFeeRuleRequest>(field: K, val: CreateFeeRu
       <div class="col-6">
         <q-input
           :model-value="modelValue.currencyCode"
-          label="Currency"
+          label="Valyuta"
           outlined
           dense
           @update:model-value="(v) => update('currencyCode', String(v ?? 'UZS'))"

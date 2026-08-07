@@ -28,35 +28,35 @@ function formatBps(bps: number | null): string {
 function feeDisplay(rule: FeeRuleResponse): string {
   if (rule.feeType === 'FIXED') return formatAmount(rule.fixedAmount);
   if (rule.feeType === 'PERCENTAGE') return formatBps(rule.percentageBps);
-  return `${rule.tiers.length} tier(s)`;
+  return `${rule.tiers.length} bosqich`;
 }
 
 // ── Table columns ─────────────────────────────────────────────────────────
 
 const columns = [
-  { name: 'name', label: 'Name', field: 'name', align: 'left' as const, sortable: true },
-  { name: 'feeType', label: 'Type', field: 'feeType', align: 'left' as const },
+  { name: 'name', label: 'Nomi', field: 'name', align: 'left' as const, sortable: true },
+  { name: 'feeType', label: 'Turi', field: 'feeType', align: 'left' as const },
   {
     name: 'fee',
-    label: 'Fee',
+    label: 'Komissiya',
     field: (r: FeeRuleResponse) => feeDisplay(r),
     align: 'left' as const,
   },
   {
     name: 'scope',
-    label: 'Scope',
+    label: 'Doirasi',
     field: (r: FeeRuleResponse) => `${r.sourceNetwork ?? '*'} → ${r.destinationNetwork ?? '*'}`,
     align: 'left' as const,
   },
   {
     name: 'priority',
-    label: 'Priority',
+    label: 'Ustuvorlik',
     field: 'priority',
     align: 'center' as const,
     sortable: true,
   },
-  { name: 'feePayer', label: 'Payer', field: 'feePayer', align: 'left' as const },
-  { name: 'isActive', label: 'Status', field: 'isActive', align: 'center' as const },
+  { name: 'feePayer', label: "To'lovchi", field: 'feePayer', align: 'left' as const },
+  { name: 'isActive', label: 'Holati', field: 'isActive', align: 'center' as const },
   { name: 'actions', label: '', field: 'id', align: 'center' as const },
 ];
 
@@ -120,7 +120,7 @@ async function submitCreate() {
     await store.createRule(toPayload(createForm.value));
     showCreate.value = false;
   } catch (e) {
-    createError.value = e instanceof ApiError ? e.message : 'Failed to create rule';
+    createError.value = e instanceof ApiError ? e.message : 'Qoida yaratishda xatolik';
   } finally {
     createLoading.value = false;
   }
@@ -168,7 +168,7 @@ async function submitSupersede() {
     await store.supersedeRule(supersedeTarget.value.id, toPayload(supersedeForm.value));
     showSupersede.value = false;
   } catch (e) {
-    supersedeError.value = e instanceof ApiError ? e.message : 'Failed to supersede rule';
+    supersedeError.value = e instanceof ApiError ? e.message : 'Qoidani almashtirishda xatolik';
   } finally {
     supersedeLoading.value = false;
   }
@@ -183,7 +183,7 @@ async function deactivate(rule: FeeRuleResponse) {
   try {
     await store.deactivateRule(rule.id);
   } catch (e) {
-    deactivateError.value = e instanceof ApiError ? e.message : 'Failed to deactivate';
+    deactivateError.value = e instanceof ApiError ? e.message : "O'chirishda xatolik";
   }
 }
 
@@ -267,13 +267,13 @@ function handleLogout() {
           flat
           dense
           no-caps
-          label="Fee Rules"
+          label="Komissiya qoidalari"
           to="/admin/fee-rules"
           active-class="text-primary"
         />
         <q-space />
         <span class="text-caption text-grey-5 q-mr-md gt-sm">{{ adminAuth.admin?.email }}</span>
-        <q-btn flat dense no-caps icon="logout" label="Sign out" @click="handleLogout" />
+        <q-btn flat dense no-caps icon="logout" label="Chiqish" @click="handleLogout" />
       </q-toolbar>
     </q-header>
 
@@ -282,9 +282,9 @@ function handleLogout() {
         <!-- Page title row -->
         <div class="row items-center q-mb-lg">
           <div class="col">
-            <h1 class="text-h5 text-weight-bold q-my-none">Fee Rules</h1>
+            <h1 class="text-h5 text-weight-bold q-my-none">Komissiya qoidalari</h1>
             <p class="text-body2 text-grey-6 q-mb-none q-mt-xs">
-              Manage fee rules applied to transfers.
+              O'tkazmalarga qo'llaniladigan komissiya qoidalarini boshqaring.
             </p>
           </div>
           <q-btn
@@ -292,7 +292,7 @@ function handleLogout() {
             color="primary"
             no-caps
             icon="add"
-            label="New rule"
+            label="Yangi qoida"
             @click="openCreate"
           />
         </div>
@@ -317,13 +317,13 @@ function handleLogout() {
           bordered
           dense
           :rows-per-page-options="[25, 50, 0]"
-          no-data-label="No fee rules yet"
+          no-data-label="Hozircha komissiya qoidalari yo'q"
         >
           <template #body-cell-isActive="props">
             <q-td :props="props" class="text-center">
               <q-badge
                 :color="props.value ? 'positive' : 'grey-5'"
-                :label="props.value ? 'Active' : 'Inactive'"
+                :label="props.value ? 'Faol' : 'Nofaol'"
               />
             </q-td>
           </template>
@@ -357,7 +357,7 @@ function handleLogout() {
                   color="deep-purple"
                   @click="openTiers(props.row)"
                 >
-                  <q-tooltip>Manage tiers</q-tooltip>
+                  <q-tooltip>Bosqichlarni boshqarish</q-tooltip>
                 </q-btn>
                 <q-btn
                   v-if="props.row.isActive"
@@ -369,7 +369,7 @@ function handleLogout() {
                   color="primary"
                   @click="openSupersede(props.row)"
                 >
-                  <q-tooltip>Supersede (replace)</q-tooltip>
+                  <q-tooltip>Almashtirish</q-tooltip>
                 </q-btn>
                 <q-btn
                   v-if="props.row.isActive"
@@ -381,7 +381,7 @@ function handleLogout() {
                   color="negative"
                   @click="deactivate(props.row)"
                 >
-                  <q-tooltip>Deactivate</q-tooltip>
+                  <q-tooltip>O'chirish</q-tooltip>
                 </q-btn>
               </q-btn-group>
             </q-td>
@@ -392,7 +392,7 @@ function handleLogout() {
         <q-dialog v-model="showCreate" persistent>
           <q-card style="min-width: 520px; max-width: 640px; width: 100%">
             <q-card-section class="q-pb-sm">
-              <div class="text-h6">New fee rule</div>
+              <div class="text-h6">Yangi komissiya qoidasi</div>
             </q-card-section>
             <q-separator />
             <q-card-section class="scroll q-gutter-y-sm" style="max-height: 70vh">
@@ -404,12 +404,12 @@ function handleLogout() {
             </q-card-section>
             <q-separator />
             <q-card-actions align="right">
-              <q-btn v-close-popup flat no-caps label="Cancel" />
+              <q-btn v-close-popup flat no-caps label="Bekor qilish" />
               <q-btn
                 unelevated
                 color="primary"
                 no-caps
-                label="Create"
+                label="Yaratish"
                 :loading="createLoading"
                 @click="submitCreate"
               />
@@ -421,10 +421,10 @@ function handleLogout() {
         <q-dialog v-model="showSupersede" persistent>
           <q-card style="min-width: 520px; max-width: 640px; width: 100%">
             <q-card-section class="q-pb-sm">
-              <div class="text-h6">Supersede rule</div>
+              <div class="text-h6">Qoidani almashtirish</div>
               <div class="text-caption text-grey-6">
-                Deactivates "{{ supersedeTarget?.name }}" and creates a replacement effective
-                immediately.
+                "{{ supersedeTarget?.name }}" ni o'chirib, darhol kuchga kiruvchi yangi qoida
+                yaratadi.
               </div>
             </q-card-section>
             <q-separator />
@@ -437,12 +437,12 @@ function handleLogout() {
             </q-card-section>
             <q-separator />
             <q-card-actions align="right">
-              <q-btn v-close-popup flat no-caps label="Cancel" />
+              <q-btn v-close-popup flat no-caps label="Bekor qilish" />
               <q-btn
                 unelevated
                 color="primary"
                 no-caps
-                label="Supersede"
+                label="Almashtirish"
                 :loading="supersedeLoading"
                 @click="submitSupersede"
               />
@@ -454,14 +454,16 @@ function handleLogout() {
         <q-dialog v-model="showTiers">
           <q-card style="min-width: 480px; max-width: 600px; width: 100%">
             <q-card-section class="q-pb-sm">
-              <div class="text-h6">Tiers — {{ tiersRule?.name }}</div>
+              <div class="text-h6">Bosqichlar — {{ tiersRule?.name }}</div>
             </q-card-section>
             <q-separator />
             <q-card-section>
               <!-- Existing tiers -->
               <q-list bordered separator dense class="q-mb-md">
                 <q-item v-if="!tiersRule?.tiers.length">
-                  <q-item-section class="text-caption text-grey-6">No tiers yet</q-item-section>
+                  <q-item-section class="text-caption text-grey-6"
+                    >Hozircha bosqichlar yo'q</q-item-section
+                  >
                 </q-item>
                 <q-item v-for="tier in tiersRule?.tiers" :key="tier.id">
                   <q-item-section>
@@ -472,8 +474,8 @@ function handleLogout() {
                     <q-item-label caption>
                       {{
                         tier.fixedAmount !== null
-                          ? formatAmount(tier.fixedAmount) + ' fixed'
-                          : formatBps(tier.percentageBps) + ' pct'
+                          ? formatAmount(tier.fixedAmount) + ' belgilangan'
+                          : formatBps(tier.percentageBps) + ' foiz'
                       }}
                     </q-item-label>
                   </q-item-section>
@@ -491,13 +493,13 @@ function handleLogout() {
               </q-list>
 
               <!-- Add tier form -->
-              <div class="text-subtitle2 q-mb-sm">Add tier</div>
+              <div class="text-subtitle2 q-mb-sm">Bosqich qo'shish</div>
               <div class="row q-col-gutter-sm">
                 <div class="col-6">
                   <q-input
                     v-model.number="tierForm.tierMinAmount"
                     type="number"
-                    label="Min amount (tiyin)"
+                    label="Min summa (tiyin)"
                     dense
                     outlined
                   />
@@ -506,7 +508,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.tierMaxAmount"
                     type="number"
-                    label="Max amount (tiyin, blank = ∞)"
+                    label="Max summa (tiyin, bo'sh = ∞)"
                     dense
                     outlined
                     clearable
@@ -516,7 +518,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.fixedAmount"
                     type="number"
-                    label="Fixed amount (tiyin)"
+                    label="Belgilangan summa (tiyin)"
                     dense
                     outlined
                     clearable
@@ -526,7 +528,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.percentageBps"
                     type="number"
-                    label="Percentage bps"
+                    label="Foiz (bps)"
                     dense
                     outlined
                     clearable
@@ -537,14 +539,14 @@ function handleLogout() {
                 unelevated
                 color="primary"
                 no-caps
-                label="Add tier"
+                label="Bosqich qo'shish"
                 class="q-mt-sm"
                 :loading="addTierLoading"
                 @click="submitAddTier"
               />
             </q-card-section>
             <q-card-actions align="right">
-              <q-btn v-close-popup flat no-caps label="Done" />
+              <q-btn v-close-popup flat no-caps label="Tayyor" />
             </q-card-actions>
           </q-card>
         </q-dialog>

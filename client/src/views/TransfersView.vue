@@ -56,13 +56,13 @@ function txDayKey(tx: TransferDto): string {
 
 function txDayLabel(tx: TransferDto): string {
   const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
-  if (!d) return 'Other';
+  if (!d) return 'Boshqa';
   const today = new Date();
-  if (isSameDay(d, today)) return 'Today';
+  if (isSameDay(d, today)) return 'Bugun';
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(d, yesterday)) return 'Yesterday';
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  if (isSameDay(d, yesterday)) return 'Kecha';
+  return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
 }
 
 const groupedTransfers = computed(() => {
@@ -87,10 +87,10 @@ const groupedTransfers = computed(() => {
       <!-- Header -->
       <div class="row items-center justify-between">
         <div>
-          <h1 class="text-h5 text-weight-bold q-my-none">Transfers</h1>
-          <p class="text-caption text-grey-6 q-mt-xs q-mb-none">Your outgoing transfer history</p>
+          <h1 class="text-h5 text-weight-bold q-my-none">O'tkazmalar</h1>
+          <p class="text-caption text-grey-6 q-mt-xs q-mb-none">Sizning o'tkazma tarixi</p>
         </div>
-        <q-btn unelevated color="primary" no-caps icon="send" label="Send money" to="/send" />
+        <q-btn unelevated color="primary" no-caps icon="send" label="Pul jo'natish" to="/send" />
       </div>
 
       <!-- Error -->
@@ -116,11 +116,11 @@ const groupedTransfers = computed(() => {
         style="border-style: dashed"
       >
         <q-icon name="swap_horiz" size="48px" color="grey-4" />
-        <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">No transfers yet</p>
+        <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">Hozircha o'tkazmalar yo'q</p>
         <p class="text-caption text-grey-6 q-mb-md">
-          Send money to another PulsePay user to get started.
+          Boshlash uchun boshqa PulsePay foydalanuvchisiga pul jo'nating.
         </p>
-        <q-btn unelevated color="primary" no-caps label="Send money" to="/send" />
+        <q-btn unelevated color="primary" no-caps label="Pul jo'natish" to="/send" />
       </q-card>
 
       <!-- Transfer list -->
@@ -149,7 +149,7 @@ const groupedTransfers = computed(() => {
                     v-if="tx.direction !== 'credit' && tx.feeAmountUzs > 0"
                     class="text-caption text-grey-6 q-ml-xs"
                   >
-                    + {{ formatAmount(tx.feeAmountUzs) }} fee
+                    + {{ formatAmount(tx.feeAmountUzs) }} komissiya
                   </span>
                 </q-item-label>
                 <q-item-label caption>

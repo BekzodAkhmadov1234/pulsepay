@@ -47,19 +47,20 @@ function resetForm() {
 function validate(): boolean {
   fieldErrors.value = {};
   const panDigits = rawPan.value.replace(/\D/g, '');
-  if (!panDigits) fieldErrors.value.maskedPan = 'Card number is required.';
-  else if (panDigits.length !== 16) fieldErrors.value.maskedPan = 'Card number must be 16 digits.';
+  if (!panDigits) fieldErrors.value.maskedPan = 'Karta raqami kiritilishi shart.';
+  else if (panDigits.length !== 16)
+    fieldErrors.value.maskedPan = "Karta raqami 16 ta raqamdan iborat bo'lishi kerak.";
   if (!form.value.cardHolderName.trim())
-    fieldErrors.value.cardHolderName = 'Cardholder name is required.';
+    fieldErrors.value.cardHolderName = 'Karta egasining ismi kiritilishi shart.';
   if (form.value.expMonth < 1 || form.value.expMonth > 12)
-    fieldErrors.value.expMonth = 'Expiry month must be 1–12.';
+    fieldErrors.value.expMonth = "Amal qilish oyi 1–12 oralig'ida bo'lishi kerak.";
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const isExpired =
     form.value.expYear < currentYear ||
     (form.value.expYear === currentYear && form.value.expMonth < currentMonth);
-  if (isExpired) fieldErrors.value.expYear = 'Card appears to be expired.';
+  if (isExpired) fieldErrors.value.expYear = "Karta muddati tugagan ko'rinadi.";
   return Object.keys(fieldErrors.value).length === 0;
 }
 
@@ -75,7 +76,7 @@ async function handleAdd() {
     if (err instanceof ApiError) {
       submitError.value = err.message;
     } else {
-      submitError.value = 'Something went wrong. Please try again.';
+      submitError.value = "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.";
     }
   }
 }
@@ -131,15 +132,15 @@ function expiry(month: number, year: number) {
       <!-- Header -->
       <div class="row items-center justify-between">
         <div>
-          <h1 class="text-h5 text-weight-bold q-my-none">My Cards</h1>
+          <h1 class="text-h5 text-weight-bold q-my-none">Mening kartalarim</h1>
           <p class="text-caption text-grey-6 q-mt-xs q-mb-none">
-            Manage your UzCard and HUMO payment cards
+            UzCard va HUMO to'lov kartalaringizni boshqaring
           </p>
         </div>
         <q-btn
           color="primary"
           icon="add"
-          label="Add card"
+          label="Karta qo'shish"
           unelevated
           no-caps
           :disable="store.isLoading"
@@ -157,13 +158,13 @@ function expiry(month: number, year: number) {
 
       <!-- Add-card form -->
       <q-card v-if="showForm" flat bordered class="q-pa-md">
-        <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">Add new card</h2>
+        <h2 class="text-subtitle1 text-weight-semibold q-mt-none q-mb-md">Yangi karta qo'shish</h2>
 
         <q-form class="row q-col-gutter-md" @submit.prevent="handleAdd">
           <div class="col-12">
             <q-input
               :model-value="rawPan"
-              label="Card number"
+              label="Karta raqami"
               placeholder="8600 1234 5678 3456"
               outlined
               maxlength="19"
@@ -177,7 +178,7 @@ function expiry(month: number, year: number) {
           <div class="col-12">
             <q-input
               v-model="form.cardHolderName"
-              label="Cardholder name"
+              label="Karta egasining ismi"
               placeholder="ALISHER KARIMOV"
               outlined
               maxlength="80"
@@ -189,7 +190,7 @@ function expiry(month: number, year: number) {
           <div class="col-12 col-sm-6">
             <q-input
               v-model.number="form.expMonth"
-              label="Expiry month"
+              label="Amal qilish oyi"
               type="number"
               outlined
               :min="1"
@@ -202,7 +203,7 @@ function expiry(month: number, year: number) {
           <div class="col-12 col-sm-6">
             <q-input
               v-model.number="form.expYear"
-              label="Expiry year"
+              label="Amal qilish yili"
               type="number"
               outlined
               :min="new Date().getFullYear()"
@@ -218,10 +219,10 @@ function expiry(month: number, year: number) {
               color="primary"
               unelevated
               no-caps
-              label="Save card"
+              label="Kartani saqlash"
               :loading="store.isLoading"
             />
-            <q-btn flat no-caps label="Cancel" @click="resetForm" />
+            <q-btn flat no-caps label="Bekor qilish" @click="resetForm" />
           </div>
         </q-form>
       </q-card>
@@ -240,9 +241,9 @@ function expiry(month: number, year: number) {
         style="border-style: dashed"
       >
         <q-icon name="credit_card" size="48px" color="grey-4" />
-        <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">No cards yet</p>
+        <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">Hozircha kartalar yo'q</p>
         <p class="text-caption text-grey-6 q-mb-none">
-          Add a UzCard or HUMO card to start making transfers.
+          O'tkazmalar qilishni boshlash uchun UzCard yoki HUMO kartasi qo'shing.
         </p>
       </q-card>
 
@@ -291,7 +292,7 @@ function expiry(month: number, year: number) {
             <!-- Cardholder + expiry -->
             <p class="text-caption text-grey-6 q-mb-xs">{{ card.cardHolderName }}</p>
             <p class="text-caption text-grey-6 q-mb-sm">
-              Expires {{ expiry(card.expMonth, card.expYear) }}
+              Amal qilish muddati: {{ expiry(card.expMonth, card.expYear) }}
             </p>
 
             <!-- Balance -->

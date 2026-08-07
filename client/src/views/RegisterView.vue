@@ -18,9 +18,9 @@ const serverError = ref('');
 const PHONE_RE = /^\+998\d{9}$/;
 
 const features = [
-  'Instant P2P transfers across Uzbekistan',
-  'Merchant payments via UzCard & Humo',
-  'Bank-grade security, CBU licensed',
+  "O'zbekiston bo'ylab tezkor P2P o'tkazmalar",
+  "UzCard va Humo orqali savdogar to'lovlari",
+  'Bank darajasidagi xavfsizlik, MBU litsenziyalangan',
 ];
 
 function validate(): boolean {
@@ -29,28 +29,28 @@ function validate(): boolean {
   errors.lastName = '';
 
   if (!phoneDigits.value) {
-    errors.phoneE164 = 'Phone number is required.';
+    errors.phoneE164 = 'Telefon raqami kiritilishi shart.';
   } else if (!PHONE_RE.test(phone.value)) {
-    errors.phoneE164 = 'Enter a valid Uzbekistan number (+998XXXXXXXXX).';
+    errors.phoneE164 = "To'g'ri O'zbekiston raqamini kiriting (+998XXXXXXXXX).";
   }
 
   const first = form.firstName.trim();
   const last = form.lastName.trim();
 
   if (!first) {
-    errors.firstName = 'First name is required.';
+    errors.firstName = 'Ism kiritilishi shart.';
   } else if (first.length < 2) {
-    errors.firstName = 'First name must be at least 2 characters.';
+    errors.firstName = "Ism kamida 2 ta belgidan iborat bo'lishi kerak.";
   } else if (first.length > 50) {
-    errors.firstName = 'First name must be 50 characters or fewer.';
+    errors.firstName = 'Ism 50 ta belgidan oshmasligi kerak.';
   }
 
   if (!last) {
-    errors.lastName = 'Last name is required.';
+    errors.lastName = 'Familiya kiritilishi shart.';
   } else if (last.length < 2) {
-    errors.lastName = 'Last name must be at least 2 characters.';
+    errors.lastName = "Familiya kamida 2 ta belgidan iborat bo'lishi kerak.";
   } else if (last.length > 50) {
-    errors.lastName = 'Last name must be 50 characters or fewer.';
+    errors.lastName = 'Familiya 50 ta belgidan oshmasligi kerak.';
   }
 
   return !errors.phoneE164 && !errors.firstName && !errors.lastName;
@@ -68,12 +68,12 @@ async function handleSubmit() {
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 409) {
-        errors.phoneE164 = 'This phone number is already registered.';
+        errors.phoneE164 = "Bu telefon raqami allaqachon ro'yxatdan o'tgan.";
       } else {
         serverError.value = err.message;
       }
     } else {
-      serverError.value = 'Something went wrong. Please try again.';
+      serverError.value = "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.";
     }
   }
 }
@@ -95,12 +95,12 @@ function onPhoneInput(val: string | number | null) {
 
       <div class="column q-gutter-y-lg">
         <div class="column q-gutter-y-sm">
-          <p class="brand-tagline">Uzbekistan's payment platform</p>
+          <p class="brand-tagline">O'zbekistonning to'lov platformasi</p>
           <h1 class="text-h4 text-weight-bold text-white q-my-none">
-            Send money<br />anywhere,<br />instantly.
+            Istalgan joyga<br />tez pul<br />o'tkazing.
           </h1>
           <p class="text-body1 text-white q-my-none" style="opacity: 0.72">
-            P2P · C2B · B2B/B2C — all payment rails in one account.
+            P2P · C2B · B2B/B2C — barcha to'lov yo'nalishlari bir hisobda.
           </p>
         </div>
 
@@ -114,7 +114,7 @@ function onPhoneInput(val: string | number | null) {
         </q-list>
       </div>
 
-      <p class="brand-copyright q-mb-none">© 2026 PulsePay · CBU Licensed</p>
+      <p class="brand-copyright q-mb-none">© 2026 PulsePay · MBU Litsenziyalangan</p>
     </aside>
 
     <!-- ── Form panel ────────────────────────────────────────── -->
@@ -126,9 +126,9 @@ function onPhoneInput(val: string | number | null) {
 
       <div class="form-inner">
         <div class="q-mb-lg">
-          <h2 class="text-h5 text-weight-bold text-dark q-my-none">Create your account</h2>
+          <h2 class="text-h5 text-weight-bold text-dark q-my-none">Hisobingizni yarating</h2>
           <p class="text-body2 text-grey-6 q-mt-xs q-mb-none">
-            Join PulsePay — Uzbekistan's payment platform.
+            PulsePay'ga qo'shiling — O'zbekistonning to'lov platformasi.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ function onPhoneInput(val: string | number | null) {
               <q-input
                 v-model="form.firstName"
                 type="text"
-                label="First name"
+                label="Ism"
                 placeholder="Jasur"
                 outlined
                 autocomplete="given-name"
@@ -159,7 +159,7 @@ function onPhoneInput(val: string | number | null) {
               <q-input
                 v-model="form.lastName"
                 type="text"
-                label="Last name"
+                label="Familiya"
                 placeholder="Yusupov"
                 outlined
                 autocomplete="family-name"
@@ -175,7 +175,7 @@ function onPhoneInput(val: string | number | null) {
             :model-value="phoneDigits"
             type="tel"
             inputmode="tel"
-            label="Mobile number"
+            label="Telefon raqami"
             outlined
             maxlength="9"
             autocomplete="tel"
@@ -191,7 +191,7 @@ function onPhoneInput(val: string | number | null) {
 
           <q-btn
             type="submit"
-            label="Create account"
+            label="Hisob yaratish"
             color="primary"
             unelevated
             class="full-width"
@@ -203,8 +203,8 @@ function onPhoneInput(val: string | number | null) {
 
         <!-- Footer -->
         <p class="text-center text-body2 text-grey-6 q-mt-xl q-mb-none">
-          Already have an account?
-          <RouterLink to="/login" class="text-primary text-weight-semibold"> Log in </RouterLink>
+          Hisobingiz bormi?
+          <RouterLink to="/login" class="text-primary text-weight-semibold"> Kirish </RouterLink>
         </p>
       </div>
     </main>

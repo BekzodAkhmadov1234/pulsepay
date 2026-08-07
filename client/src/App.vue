@@ -32,7 +32,7 @@ function handleLogout() {
           flat
           dense
           no-caps
-          label="Dashboard"
+          label="Bosh sahifa"
           to="/"
           exact
           active-class="text-primary text-weight-medium"
@@ -41,7 +41,7 @@ function handleLogout() {
           flat
           dense
           no-caps
-          label="Cards"
+          label="Kartalar"
           to="/cards"
           class="q-ml-xs"
           active-class="text-primary text-weight-medium"
@@ -50,7 +50,7 @@ function handleLogout() {
           flat
           dense
           no-caps
-          label="Transfers"
+          label="O'tkazmalar"
           to="/transfers"
           class="q-ml-xs"
           active-class="text-primary text-weight-medium"
@@ -61,11 +61,11 @@ function handleLogout() {
           <span class="text-body2 text-grey-6 q-mr-sm gt-sm">{{
             auth.user?.fullName || auth.user?.phoneE164
           }}</span>
-          <q-btn flat dense no-caps icon="logout" label="Log out" @click="handleLogout" />
+          <q-btn flat dense no-caps icon="logout" label="Chiqish" @click="handleLogout" />
         </template>
         <template v-else>
-          <q-btn flat dense no-caps label="Log in" to="/login" class="q-mr-sm" />
-          <q-btn unelevated color="primary" no-caps label="Get started" to="/register" />
+          <q-btn flat dense no-caps label="Kirish" to="/login" class="q-mr-sm" />
+          <q-btn unelevated color="primary" no-caps label="Boshlash" to="/register" />
         </template>
       </q-toolbar>
     </q-header>

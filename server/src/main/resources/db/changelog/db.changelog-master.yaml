@@ -68,3 +68,5 @@ databaseChangeLog:
       file: db/changelog/changes/seed/s09-fee-rules-realistic.yaml
   - include:
       file: db/changelog/changes/seed/s10-admin-seed.yaml
+  - include:
+      file: db/changelog/changes/stage-1/017-route-processor-names.yaml

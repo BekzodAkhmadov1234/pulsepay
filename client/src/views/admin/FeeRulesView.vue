@@ -97,6 +97,22 @@ function toPayload(f: CreateFeeRuleRequest): CreateFeeRuleRequest {
     maxFeeAmount: f.maxFeeAmount !== null ? Number(f.maxFeeAmount) : null,
     maxAmount: f.maxAmount !== null ? Number(f.maxAmount) : null,
     transferTypeId: f.transferTypeId !== null ? Number(f.transferTypeId) : null,
+    tiers:
+      f.feeType === 'TIERED' && f.tiers
+        ? f.tiers.map((t) => ({
+            tierMinAmount: Math.round(parseFloat(String(t.tierMinAmount)) * 100),
+            tierMaxAmount:
+              t.tierMaxAmount !== null
+                ? Math.round(parseFloat(String(t.tierMaxAmount)) * 100)
+                : null,
+            fixedAmount:
+              t.fixedAmount !== null ? Math.round(parseFloat(String(t.fixedAmount)) * 100) : null,
+            percentageBps:
+              t.percentageBps !== null
+                ? Math.round(parseFloat(String(t.percentageBps)) * 100)
+                : null,
+          }))
+        : null,
   };
 }
 
@@ -217,12 +233,19 @@ async function submitAddTier() {
   addTierLoading.value = true;
   try {
     await store.addTier(tiersRuleId.value, {
-      tierMinAmount: Number(tierForm.value.tierMinAmount),
+      tierMinAmount: Math.round(parseFloat(String(tierForm.value.tierMinAmount)) * 100),
       tierMaxAmount:
-        tierForm.value.tierMaxAmount !== null ? Number(tierForm.value.tierMaxAmount) : null,
-      fixedAmount: tierForm.value.fixedAmount !== null ? Number(tierForm.value.fixedAmount) : null,
+        tierForm.value.tierMaxAmount !== null
+          ? Math.round(parseFloat(String(tierForm.value.tierMaxAmount)) * 100)
+          : null,
+      fixedAmount:
+        tierForm.value.fixedAmount !== null
+          ? Math.round(parseFloat(String(tierForm.value.fixedAmount)) * 100)
+          : null,
       percentageBps:
-        tierForm.value.percentageBps !== null ? Number(tierForm.value.percentageBps) : null,
+        tierForm.value.percentageBps !== null
+          ? Math.round(parseFloat(String(tierForm.value.percentageBps)) * 100)
+          : null,
     });
     tierForm.value = {
       tierMinAmount: 0,
@@ -270,6 +293,15 @@ function handleLogout() {
           label="Komissiya qoidalari"
           to="/admin/fee-rules"
           active-class="text-primary"
+        />
+        <q-btn
+          flat
+          dense
+          no-caps
+          label="Yo'nalishlar"
+          to="/admin/routes"
+          active-class="text-primary"
+          class="q-ml-sm"
         />
         <q-space />
         <span class="text-caption text-grey-5 q-mr-md gt-sm">{{ adminAuth.admin?.email }}</span>
@@ -499,7 +531,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.tierMinAmount"
                     type="number"
-                    label="Min summa (tiyin)"
+                    label="Min summa (UZS)"
                     dense
                     outlined
                   />
@@ -508,7 +540,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.tierMaxAmount"
                     type="number"
-                    label="Max summa (tiyin, bo'sh = ∞)"
+                    label="Max summa (UZS, bo'sh = ∞)"
                     dense
                     outlined
                     clearable
@@ -518,7 +550,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.fixedAmount"
                     type="number"
-                    label="Belgilangan summa (tiyin)"
+                    label="Belgilangan summa (UZS)"
                     dense
                     outlined
                     clearable
@@ -528,7 +560,7 @@ function handleLogout() {
                   <q-input
                     v-model.number="tierForm.percentageBps"
                     type="number"
-                    label="Foiz (bps)"
+                    label="Foiz (%)"
                     dense
                     outlined
                     clearable

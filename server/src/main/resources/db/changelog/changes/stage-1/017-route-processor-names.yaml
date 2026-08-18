@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-route-processor-names
+      author: pulsepay
+      comment: >
+        Update stub processor names to real network codes so that the gateway
+        dispatcher can select the correct intermediary for each route.
+      changes:
+        - sql:
+            sql: >
+              UPDATE transfer_routes
+              SET processor_name = 'uzcard'
+              WHERE source_network = 'uzcard';
+        - sql:
+            sql: >
+              UPDATE transfer_routes
+              SET processor_name = 'humo'
+              WHERE source_network = 'humo';

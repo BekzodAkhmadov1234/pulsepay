@@ -15,42 +15,59 @@ public class TransferRouteEntity {
 
     @Id
     @Column(name = "id")
-    private UUID id;
+    UUID id;
 
     @Column(name = "route_code", nullable = false, unique = true, length = 30)
-    private String routeCode;
+    String routeCode;
 
     @Column(name = "source_network", nullable = false, length = 20)
-    private String sourceNetwork;
+    String sourceNetwork;
 
     @Column(name = "destination_network", nullable = false, length = 20)
-    private String destinationNetwork;
+    String destinationNetwork;
 
     @Column(name = "processor_name", nullable = false, length = 30)
-    private String processorName;
+    String processorName;
 
     @Column(name = "max_amount")
-    private Long maxAmount;
+    Long maxAmount;
 
     @Column(name = "priority", nullable = false)
-    private int priority;
+    int priority;
 
     @Column(name = "avg_processing_seconds")
-    private Integer avgProcessingSeconds;
+    Integer avgProcessingSeconds;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    boolean isActive;
 
     @Column(name = "transfer_type_id")
-    private Integer transferTypeId;
+    Integer transferTypeId;
 
     @Column(name = "effective_from", nullable = false)
-    private Instant effectiveFrom;
+    Instant effectiveFrom;
 
     @Column(name = "effective_to")
-    private Instant effectiveTo;
+    Instant effectiveTo;
 
     protected TransferRouteEntity() {}
+
+    public static TransferRouteEntity fromDomain(TransferRoute r) {
+        TransferRouteEntity e = new TransferRouteEntity();
+        e.id = r.id();
+        e.routeCode = r.routeCode();
+        e.sourceNetwork = r.sourceNetwork();
+        e.destinationNetwork = r.destinationNetwork();
+        e.processorName = r.processorName();
+        e.maxAmount = r.maxAmount();
+        e.priority = r.priority();
+        e.avgProcessingSeconds = r.avgProcessingSeconds();
+        e.isActive = r.isActive();
+        e.transferTypeId = r.transferTypeId();
+        e.effectiveFrom = r.effectiveFrom();
+        e.effectiveTo = r.effectiveTo();
+        return e;
+    }
 
     public TransferRoute toDomain() {
         return new TransferRoute(id, routeCode, sourceNetwork, destinationNetwork, processorName,

@@ -10,11 +10,13 @@ import uz.pulsepay.fee.domain.port.out.FeeRuleRepository;
 import uz.pulsepay.ledger.domain.port.in.PostLedgerEntriesPort;
 import uz.pulsepay.limit.domain.port.in.IncrementLimitUsagePort;
 import uz.pulsepay.network.domain.port.in.ExecuteCardTransferPort;
+import uz.pulsepay.routing.domain.port.in.FindRoutePort;
 import uz.pulsepay.shared.domain.Money;
 import uz.pulsepay.shared.exception.DomainException;
 import uz.pulsepay.shared.exception.NotFoundException;
 import uz.pulsepay.transfer.domain.model.*;
 import uz.pulsepay.transfer.domain.port.in.ConfirmTransferOtpPort;
+import uz.pulsepay.transfer.domain.port.out.TransferOtpPort;
 import uz.pulsepay.transfer.domain.port.out.TransferParticipantRepository;
 import uz.pulsepay.transfer.domain.port.out.TransferRepository;
 import uz.pulsepay.transfer.domain.port.out.TransferStatusHistoryRepository;
@@ -38,6 +40,8 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
     private final IncrementLimitUsagePort incrementLimitUsagePort;
     private final EvaluateComplianceFlagsPort evaluateComplianceFlagsPort;
     private final FeeRuleRepository feeRuleRepository;
+    private final TransferOtpPort transferOtpPort;
+    private final FindRoutePort findRoutePort;
 
     public ConfirmTransferOtpUseCase(
             TransferRepository transferRepository,
@@ -47,7 +51,9 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
             PostLedgerEntriesPort postLedgerEntriesPort,
             IncrementLimitUsagePort incrementLimitUsagePort,
             EvaluateComplianceFlagsPort evaluateComplianceFlagsPort,
-            FeeRuleRepository feeRuleRepository) {
+            FeeRuleRepository feeRuleRepository,
+            TransferOtpPort transferOtpPort,
+            FindRoutePort findRoutePort) {
         this.transferRepository = transferRepository;
         this.participantRepository = participantRepository;
         this.historyRepository = historyRepository;
@@ -56,6 +62,8 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
         this.incrementLimitUsagePort = incrementLimitUsagePort;
         this.evaluateComplianceFlagsPort = evaluateComplianceFlagsPort;
         this.feeRuleRepository = feeRuleRepository;
+        this.transferOtpPort = transferOtpPort;
+        this.findRoutePort = findRoutePort;
     }
 
     @Override
@@ -69,9 +77,8 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
         // State machine guard: only OTP_PENDING → PROCESSING is legal here
         TransferStateMachine.assertTransition(transfer.status(), TransferStatus.PROCESSING);
 
-        // OTP verification skipped until SMS gateway (PaySys/MONTRA) is integrated.
-        // Any non-blank code is accepted in this phase.
-        log.info("OTP check bypassed (stub phase) for transfer={}, transitioning to PROCESSING", transferId);
+        // Verify OTP: enforces 59s expiry, 3-attempt cap, 15-min lockout (REG-03)
+        transferOtpPort.verify(userId, otpCode, transferId);
 
         // Status → PROCESSING
         transfer = transferRepository.updateStatus(transferId, TransferStatus.PROCESSING, "OTP confirmed");
@@ -106,17 +113,21 @@ public class ConfirmTransferOtpUseCase implements ConfirmTransferOtpPort {
         }
         Money creditAmount = transfer.amount(); // recipient always receives principal in Stage 1
 
-        // Execute network transfer
-        String routeCode = transfer.appliedRouteId() != null ? transfer.appliedRouteId().toString() : "default";
-        log.debug("Executing network transfer: transferId={}, route={}, debit={}, credit={}",
-                  transferId, routeCode, debitAmount, creditAmount);
+        // Resolve intermediary/processor from the applied route
+        String processorName = transfer.appliedRouteId() != null
+                ? findRoutePort.findById(transfer.appliedRouteId())
+                        .map(r -> r.processorName())
+                        .orElse("uzcard")
+                : "uzcard";
+        log.debug("Executing network transfer via intermediary: transferId={}, processor={}, debit={}, credit={}",
+                  transferId, processorName, debitAmount, creditAmount);
         executeCardTransferPort.execute(
                 transferId,
                 sender.instrumentId(),
                 recipient.instrumentId(),
                 debitAmount,
                 creditAmount,
-                routeCode);
+                processorName);
         log.debug("Network transfer executed: transferId={}", transferId);
 
         // Post ledger entries (Risk #1: same transaction)

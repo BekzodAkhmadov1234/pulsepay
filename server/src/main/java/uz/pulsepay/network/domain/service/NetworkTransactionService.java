@@ -1,5 +1,6 @@
 package uz.pulsepay.network.domain.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uz.pulsepay.network.domain.model.CardTransaction;
 import uz.pulsepay.network.domain.port.in.ExecuteCardTransferPort;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class NetworkTransactionService implements ExecuteCardTransferPort {
 
@@ -30,12 +32,14 @@ public class NetworkTransactionService implements ExecuteCardTransferPort {
 
     @Override
     public void execute(UUID transferId, UUID senderCardId, UUID recipientCardId,
-                        Money debitAmount, Money creditAmount, String routeCode) {
-        // Resolve which gateway to use from the route code prefix
-        String network = routeCode.startsWith("uzcard") ? "uzcard" : "humo";
-        CardNetworkGateway gateway = gatewaysByCode.get(network);
+                        Money debitAmount, Money creditAmount, String processorName) {
+        // Select gateway by processor name (the configured intermediary for this route)
+        CardNetworkGateway gateway = gatewaysByCode.get(processorName);
         if (gateway == null) {
-            throw new DomainException("No gateway available for network: " + network);
+            // Fallback: use any available gateway (covers 'stub' or unknown processors)
+            gateway = gatewaysByCode.values().stream().findFirst()
+                    .orElseThrow(() -> new DomainException("No gateway available for processor: " + processorName));
+            log.warn("Unknown processor '{}' — falling back to gateway '{}'", processorName, gateway.networkCode());
         }
 
         gateway.debitCard(senderCardId, debitAmount, transferId.toString() + "-debit");

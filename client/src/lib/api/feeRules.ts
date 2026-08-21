@@ -68,6 +68,7 @@ export const feeRulesApi = {
   list: () => adminClient.get<FeeRuleResponse[]>('/fee-rules'),
   get: (id: string) => adminClient.get<FeeRuleResponse>(`/fee-rules/${id}`),
   create: (data: CreateFeeRuleRequest) => adminClient.post<FeeRuleResponse>('/fee-rules', data),
+  activate: (id: string) => adminClient.patch<FeeRuleResponse>(`/fee-rules/${id}/activate`),
   deactivate: (id: string) => adminClient.patch<FeeRuleResponse>(`/fee-rules/${id}/deactivate`),
   supersede: (id: string, data: CreateFeeRuleRequest) =>
     adminClient.put<FeeRuleResponse>(`/fee-rules/${id}/supersede`, data),

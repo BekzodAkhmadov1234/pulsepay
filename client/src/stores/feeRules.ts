@@ -26,6 +26,12 @@ export const useFeeRulesStore = defineStore('feeRules', () => {
     return rule;
   }
 
+  async function activateRule(id: string): Promise<void> {
+    const updated = await feeRulesApi.activate(id);
+    const idx = rules.value.findIndex((r) => r.id === id);
+    if (idx !== -1) rules.value[idx] = updated;
+  }
+
   async function deactivateRule(id: string): Promise<void> {
     const updated = await feeRulesApi.deactivate(id);
     const idx = rules.value.findIndex((r) => r.id === id);
@@ -59,6 +65,7 @@ export const useFeeRulesStore = defineStore('feeRules', () => {
     error,
     loadRules,
     createRule,
+    activateRule,
     deactivateRule,
     supersedeRule,
     addTier,

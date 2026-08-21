@@ -104,6 +104,39 @@ public class ManageFeeRuleUseCase implements ManageFeeRulePort {
 
     @Override
     @Transactional
+    public FeeRule activate(UUID id) {
+        UUID adminId = requireAdminId();
+        FeeRule rule = getRule(id);
+
+        // Run overlap check using the rule's own scope, excluding itself
+        CreateFeeRuleCommand checkCmd = new CreateFeeRuleCommand(
+                rule.name(), rule.sourceNetwork(), rule.destinationNetwork(),
+                rule.minAmount(), rule.maxAmount(),
+                rule.feeType(), rule.fixedAmount(), rule.percentageBps(),
+                rule.minFeeAmount(), rule.maxFeeAmount(),
+                rule.currencyCode(), rule.priority(),
+                rule.effectiveFrom(), null,
+                rule.transferTypeId(), rule.feePayer(), rule.feeRecipient(), null);
+        validateNoOverlap(rule.id(), checkCmd);
+
+        FeeRule updated = new FeeRule(
+                rule.id(), rule.name(),
+                rule.sourceNetwork(), rule.destinationNetwork(),
+                rule.minAmount(), rule.maxAmount(),
+                rule.feeType(), rule.fixedAmount(), rule.percentageBps(),
+                rule.minFeeAmount(), rule.maxFeeAmount(),
+                rule.currencyCode(), rule.priority(), true,
+                rule.effectiveFrom(), null,
+                rule.transferTypeId(), rule.feePayer(), rule.feeRecipient(),
+                rule.createdAt(), rule.createdByAdminId(), adminId);
+
+        FeeRule saved = feeRuleRepository.save(updated);
+        log.info("Fee rule activated: id={}, by adminId={}", id, adminId);
+        return saved;
+    }
+
+    @Override
+    @Transactional
     public FeeRule supersede(UUID id, CreateFeeRuleCommand replacement) {
         UUID adminId = requireAdminId();
         FeeRule old = getRule(id);

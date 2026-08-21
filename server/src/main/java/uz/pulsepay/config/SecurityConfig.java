@@ -15,6 +15,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import uz.pulsepay.infrastructure.security.AdminJwtFilter;
 import uz.pulsepay.infrastructure.security.JwtAuthenticationFilter;
 import uz.pulsepay.infrastructure.security.JwtService;
+import uz.pulsepay.infrastructure.security.MerchantJwtFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -62,7 +63,41 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin/v1/auth/login").permitAll()
                         .anyRequest().hasRole("ADMIN"))
+                .exceptionHandling(e -> e.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Admin authentication required\"}");
+                        }))
                 .addFilterBefore(new AdminJwtFilter(jwtService),
+                        UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    /**
+     * Merchant filter chain — secures all {@code /merchant/**} routes.
+     * Requires a valid merchant-type JWT bearing {@code ROLE_MERCHANT}.
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain merchantFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/merchant/**")
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/merchant/v1/auth/login").permitAll()
+                        .anyRequest().hasRole("MERCHANT"))
+                .exceptionHandling(e -> e.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Merchant authentication required\"}");
+                        }))
+                .addFilterBefore(new MerchantJwtFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
@@ -75,7 +110,7 @@ public class SecurityConfig {
      * routes require a valid user-type JWT (minimum authority: {@code ROLE_BASIC}).
      */
     @Bean
-    @Order(2)
+    @Order(3)
     public SecurityFilterChain userFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/api/**")
@@ -102,7 +137,7 @@ public class SecurityConfig {
      * Any request reaching this chain that is not matched by the above rules is denied.
      */
     @Bean
-    @Order(3)
+    @Order(4)
     public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -117,7 +152,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

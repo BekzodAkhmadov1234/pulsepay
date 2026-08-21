@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useAdminAuthStore } from '@/stores/adminAuth';
+import { useMerchantAuthStore } from '@/stores/merchantAuth';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,7 +26,7 @@ const router = createRouter({
     {
       path: '/register',
       name: 'register',
-      component: () => import('../views/RegisterView.vue'),
+      component: () => import('../views/LoginView.vue'),
       meta: { guestOnly: true, authLayout: true },
     },
     {
@@ -47,6 +48,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/reports',
+      name: 'reports',
+      component: () => import('../views/HisobotlarView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/admin/login',
       name: 'admin-login',
       component: () => import('../views/admin/AdminLoginView.vue'),
@@ -59,10 +66,34 @@ const router = createRouter({
       meta: { requiresAdmin: true },
     },
     {
-      path: '/admin/routes',
-      name: 'admin-routes',
-      component: () => import('../views/admin/RoutesView.vue'),
+      path: '/admin/merchants',
+      name: 'admin-merchants',
+      component: () => import('../views/admin/MerchantsView.vue'),
       meta: { requiresAdmin: true },
+    },
+    {
+      path: '/merchant/login',
+      name: 'merchant-login',
+      component: () => import('../views/merchant/MerchantLoginView.vue'),
+      meta: { merchantGuestOnly: true },
+    },
+    {
+      path: '/merchant/dashboard',
+      name: 'merchant-dashboard',
+      component: () => import('../views/merchant/MerchantDashboardView.vue'),
+      meta: { requiresMerchant: true },
+    },
+    {
+      path: '/merchant/terminal',
+      name: 'merchant-terminal',
+      component: () => import('../views/merchant/VirtualTerminalView.vue'),
+      meta: { requiresMerchant: true },
+    },
+    {
+      path: '/merchant/settlements',
+      name: 'merchant-settlements',
+      component: () => import('../views/merchant/MerchantSettlementsView.vue'),
+      meta: { requiresMerchant: true },
     },
   ],
 });
@@ -70,12 +101,19 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore();
   const adminAuth = useAdminAuthStore();
+  const merchantAuth = useMerchantAuthStore();
 
   if (to.meta.requiresAdmin && !adminAuth.isAuthenticated) {
     return { name: 'admin-login', query: { redirect: to.fullPath } };
   }
   if (to.meta.adminGuestOnly && adminAuth.isAuthenticated) {
     return { name: 'admin-fee-rules' };
+  }
+  if (to.meta.requiresMerchant && !merchantAuth.isAuthenticated) {
+    return { name: 'merchant-login', query: { redirect: to.fullPath } };
+  }
+  if (to.meta.merchantGuestOnly && merchantAuth.isAuthenticated) {
+    return { name: 'merchant-dashboard' };
   }
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } };

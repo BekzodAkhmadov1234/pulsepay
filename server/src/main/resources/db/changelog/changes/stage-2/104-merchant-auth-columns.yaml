@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 104-merchant-auth-columns
+      author: pulsepay
+      changes:
+        - addColumn:
+            tableName: merchants
+            columns:
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+              - column:
+                  name: password_hash
+                  type: VARCHAR(255)
+        - sql:
+            sql: ALTER TABLE merchants ADD CONSTRAINT uq_merchants_email UNIQUE (email);

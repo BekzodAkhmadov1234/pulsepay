@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 import uz.pulsepay.identity.domain.model.Session;
 
 import java.time.Instant;
@@ -23,7 +24,8 @@ public class SessionEntity {
     @Column(name = "device_id")
     private UUID deviceId;
 
-    @Column(name = "ip_address", length = 45)
+    @Column(name = "ip_address", columnDefinition = "inet")
+    @ColumnTransformer(write = "?::inet")
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false, updatable = false)

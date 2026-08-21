@@ -16,7 +16,7 @@ import java.util.UUID;
 interface TransferJpaRepository extends JpaRepository<TransferEntity, UUID> {
     Optional<TransferEntity> findByIdempotencyKey(String idempotencyKey);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE TransferEntity t SET t.status = :status, t.completedAt = :completedAt WHERE t.id = :id")
     void updateStatus(@Param("id") UUID id, @Param("status") TransferStatus status,
                       @Param("completedAt") Instant completedAt);

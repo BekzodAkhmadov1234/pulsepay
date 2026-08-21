@@ -1,0 +1,43 @@
+databaseChangeLog:
+
+  # ── Translate fee rule names to Uzbek ─────────────────────────────────────
+
+  - changeSet:
+      id: s11-translate-fee-rule-names
+      author: pulsepay
+      changes:
+        - update:
+            tableName: fee_rules
+            columns:
+              - column: { name: name, value: "P2P bepul (sinov bosqichi)" }
+            where: "id = '00000000-0000-0000-0000-000000000101'"
+
+        - update:
+            tableName: fee_rules
+            columns:
+              - column: { name: name, value: "P2P umumiy 1% (min 5 UZS, max 1 000 UZS)" }
+            where: "id = '00000000-0000-0000-0000-000000000102'"
+
+        - update:
+            tableName: fee_rules
+            columns:
+              - column: { name: name, value: "P2P UzCard→UzCard 0.65%" }
+            where: "id = '00000000-0000-0000-0000-000000000103'"
+
+        - update:
+            tableName: fee_rules
+            columns:
+              - column: { name: name, value: "P2P UzCard→Humo 1.5% (min 5 UZS, max 1 500 UZS)" }
+            where: "id = '00000000-0000-0000-0000-000000000104'"
+
+        - update:
+            tableName: fee_rules
+            columns:
+              - column: { name: name, value: "P2P Humo→Humo bosqichli (max 2 000 UZS)" }
+            where: "id = '00000000-0000-0000-0000-000000000105'"
+
+        - update:
+            tableName: fee_rules
+            columns:
+              - column: { name: name, value: "C2B savdogar to'laydi 0.65% (Bosqich 2)" }
+            where: "id = '00000000-0000-0000-0000-000000000106'"

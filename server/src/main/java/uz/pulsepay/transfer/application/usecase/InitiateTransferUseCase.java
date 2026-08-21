@@ -20,6 +20,7 @@ import uz.pulsepay.shared.exception.NotFoundException;
 import uz.pulsepay.shared.idempotency.IdempotencyService;
 import uz.pulsepay.transfer.domain.model.*;
 import uz.pulsepay.transfer.domain.port.in.InitiateTransferPort;
+import uz.pulsepay.transfer.domain.port.out.TransferOtpPort;
 import uz.pulsepay.transfer.domain.port.out.TransferParticipantRepository;
 import uz.pulsepay.transfer.domain.port.out.TransferRepository;
 import uz.pulsepay.transfer.domain.port.out.TransferStatusHistoryRepository;
@@ -56,6 +57,7 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
     private final TransferRepository transferRepository;
     private final TransferParticipantRepository participantRepository;
     private final TransferStatusHistoryRepository historyRepository;
+    private final TransferOtpPort transferOtpPort;
 
     public InitiateTransferUseCase(
             IdempotencyService idempotencyService,
@@ -68,7 +70,8 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
             ResolveRoutePort resolveRoutePort,
             TransferRepository transferRepository,
             TransferParticipantRepository participantRepository,
-            TransferStatusHistoryRepository historyRepository) {
+            TransferStatusHistoryRepository historyRepository,
+            TransferOtpPort transferOtpPort) {
         this.idempotencyService = idempotencyService;
         this.userRepository = userRepository;
         this.participantService = participantService;
@@ -80,6 +83,7 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
         this.transferRepository = transferRepository;
         this.participantRepository = participantRepository;
         this.historyRepository = historyRepository;
+        this.transferOtpPort = transferOtpPort;
     }
 
     @Override
@@ -162,6 +166,9 @@ public class InitiateTransferUseCase implements InitiateTransferPort {
         historyRepository.save(new TransferStatusHistory(
                 UUID.randomUUID(), transfer.id(), null,
                 TransferStatus.OTP_PENDING, "Transfer initiated", Instant.now()));
+
+        // 13. Generate OTP for transfer confirmation
+        transferOtpPort.generate(senderId, transfer.id());
 
         log.info("Transfer created: id={}, status=OTP_PENDING, amount={}, fee={}", transfer.id(), transfer.amount(), feeAmount);
         return transfer;

@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { register as apiRegister, login as apiLogin } from '@/lib/api/auth';
+import { register as apiRegister, requestOtp, getDevOtp, verifyOtp } from '@/lib/api/auth';
 import type { RegisterPayload, LoginPayload } from '@/lib/api/auth';
 import { getToken, setToken, clearToken, decodeJwtPayload, isTokenExpired } from '@/lib/token';
 
@@ -40,7 +40,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(payload: RegisterPayload): Promise<void> {
     isLoading.value = true;
     try {
-      const res = await apiRegister(payload);
+      // Create account, then auto-verify phone via mock OTP (dev flow)
+      await apiRegister(payload);
+      await requestOtp(payload.phoneE164);
+      const { code } = await getDevOtp(payload.phoneE164);
+      const res = await verifyOtp(payload.phoneE164, code);
       setToken(res.accessToken);
       _hydrateUser(res.accessToken);
     } finally {
@@ -51,7 +55,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(payload: LoginPayload): Promise<void> {
     isLoading.value = true;
     try {
-      const res = await apiLogin(payload);
+      // Request OTP, auto-fetch from dev endpoint, then verify — transparent to the user
+      await requestOtp(payload.phoneE164);
+      const { code } = await getDevOtp(payload.phoneE164);
+      const res = await verifyOtp(payload.phoneE164, code);
       setToken(res.accessToken);
       _hydrateUser(res.accessToken);
     } finally {

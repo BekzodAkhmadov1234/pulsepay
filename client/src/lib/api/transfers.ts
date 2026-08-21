@@ -41,3 +41,7 @@ export function confirmTransfer(id: string, code: string): Promise<TransferDto> 
 export function listTransfers(): Promise<TransferDto[]> {
   return apiClient.get<TransferDto[]>('/transfers');
 }
+
+export function fetchDevOtp(phoneE164: string): Promise<{ code: string }> {
+  return apiClient.get<{ code: string }>(`/dev/otp/${encodeURIComponent(phoneE164)}`);
+}

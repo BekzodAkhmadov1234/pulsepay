@@ -1,0 +1,103 @@
+databaseChangeLog:
+
+  # ── Activate c2b transfer type ─────────────────────────────────────────────
+  - changeSet:
+      id: s12-c2b-activate
+      author: pulsepay
+      changes:
+        - update:
+            tableName: transfer_types
+            columns:
+              - column:
+                  name: is_active
+                  valueBoolean: true
+            where: "code = 'c2b'"
+
+  # ── Seed merchant categories (MCC) ────────────────────────────────────────
+  - changeSet:
+      id: s12-merchant-categories
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: merchant_categories
+            columns:
+              - column: { name: mcc_code, value: '5411' }
+              - column: { name: name_uz,  value: "Oziq-ovqat do'konlari" }
+              - column: { name: risk_tier, value: 'standard' }
+        - insert:
+            tableName: merchant_categories
+            columns:
+              - column: { name: mcc_code, value: '5812' }
+              - column: { name: name_uz,  value: 'Restoran va ovqatlanish joylari' }
+              - column: { name: risk_tier, value: 'standard' }
+        - insert:
+            tableName: merchant_categories
+            columns:
+              - column: { name: mcc_code, value: '5999' }
+              - column: { name: name_uz,  value: 'Turli savdo korxonalari' }
+              - column: { name: risk_tier, value: 'standard' }
+        - insert:
+            tableName: merchant_categories
+            columns:
+              - column: { name: mcc_code, value: '7372' }
+              - column: { name: name_uz,  value: "Dasturiy ta'minot va IT xizmatlari" }
+              - column: { name: risk_tier, value: 'elevated' }
+
+  # ── C2B transfer routes ────────────────────────────────────────────────────
+  - changeSet:
+      id: s12-routes-c2b-uzcard
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                  valueComputed: gen_random_uuid() }
+              - column: { name: route_code,           value: 'uzcard_to_merchant_c2b' }
+              - column: { name: source_network,       value: 'uzcard' }
+              - column: { name: destination_network,  value: 'merchant' }
+              - column: { name: transfer_type_id,     valueNumeric: 3 }
+              - column: { name: processor_name,       value: 'stub' }
+              - column: { name: priority,             valueNumeric: 10 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: effective_from,       valueComputed: 'NOW()' }
+
+  - changeSet:
+      id: s12-routes-c2b-humo
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                  valueComputed: gen_random_uuid() }
+              - column: { name: route_code,           value: 'humo_to_merchant_c2b' }
+              - column: { name: source_network,       value: 'humo' }
+              - column: { name: destination_network,  value: 'merchant' }
+              - column: { name: transfer_type_id,     valueNumeric: 3 }
+              - column: { name: processor_name,       value: 'stub' }
+              - column: { name: priority,             valueNumeric: 10 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: effective_from,       valueComputed: 'NOW()' }
+
+  # ── C2B fee rule — 1.5% (min 500 UZS, max 50 000 UZS) ───────────────────
+  - changeSet:
+      id: s12-fee-rule-c2b
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,               valueComputed: gen_random_uuid() }
+              - column: { name: name,              value: "C2B savdogar to'lovi — 1.5%" }
+              - column: { name: transfer_type_id,  valueNumeric: 3 }
+              - column: { name: fee_type,          value: 'percentage' }
+              - column: { name: percentage_bps,    valueNumeric: 150 }
+              - column: { name: min_fee_amount,    valueNumeric: 50000 }
+              - column: { name: max_fee_amount,    valueNumeric: 5000000 }
+              - column: { name: min_amount,        valueNumeric: 0 }
+              - column: { name: currency_code,     value: 'UZS' }
+              - column: { name: priority,          valueNumeric: 1 }
+              - column: { name: is_active,         valueBoolean: true }
+              - column: { name: fee_payer,         value: 'sender' }
+              - column: { name: fee_recipient,     value: 'platform' }
+              - column: { name: effective_from,    valueComputed: 'NOW()' }
+              - column: { name: created_at,        valueComputed: 'NOW()' }

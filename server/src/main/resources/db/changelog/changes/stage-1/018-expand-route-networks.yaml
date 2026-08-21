@@ -1,0 +1,14 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 018-expand-route-dest-network
+      author: pulsepay
+      comment: "Expand chk_routes_dest_network to allow 'merchant' for C2B routes"
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE transfer_routes
+                DROP CONSTRAINT IF EXISTS chk_routes_dest_network;
+              ALTER TABLE transfer_routes
+                ADD CONSTRAINT chk_routes_dest_network
+                  CHECK (destination_network IN ('uzcard', 'humo', 'merchant'));

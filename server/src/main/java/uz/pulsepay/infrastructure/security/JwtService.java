@@ -66,8 +66,9 @@ public class JwtService {
     /** Admin email embedded in admin tokens (for UI display only). */
     public static final String CLAIM_EMAIL     = "email";
 
-    public static final String TYPE_USER  = "user";
-    public static final String TYPE_ADMIN = "admin";
+    public static final String TYPE_USER     = "user";
+    public static final String TYPE_ADMIN    = "admin";
+    public static final String TYPE_MERCHANT = "merchant";
 
     // ── State ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,23 @@ public class JwtService {
                 .subject(adminId.toString())
                 .claim(CLAIM_TYPE,  TYPE_ADMIN)
                 .claim(CLAIM_ROLE,  role)
+                .claim(CLAIM_EMAIL, email)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(signingKey)
+                .compact();
+    }
+
+    /**
+     * Generates a short-lived merchant access token.
+     */
+    public String generateMerchantToken(UUID merchantId, String email) {
+        Date now    = new Date();
+        Date expiry = new Date(now.getTime() + properties.getAdminExpirySeconds() * 1_000L);
+
+        return Jwts.builder()
+                .subject(merchantId.toString())
+                .claim(CLAIM_TYPE,  TYPE_MERCHANT)
                 .claim(CLAIM_EMAIL, email)
                 .issuedAt(now)
                 .expiration(expiry)

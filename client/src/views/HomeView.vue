@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { useCardsStore } from '@/stores/cards';
 import { useTransfersStore } from '@/stores/transfers';
 import type { TransferDto } from '@/lib/api/transfers';
 
-const router = useRouter();
 const cardsStore = useCardsStore();
 const transfersStore = useTransfersStore();
 
@@ -21,282 +19,258 @@ const totalBalanceUzs = computed(() =>
 );
 
 const balanceDisplay = computed(() =>
-  cardsStore.cards.length === 0
-    ? '— UZS'
-    : Number(totalBalanceUzs.value).toLocaleString('uz-UZ') + ' UZS'
+  cardsStore.cards.length === 0 ? '— UZS' : formatAmount(totalBalanceUzs.value) + ' UZS'
 );
 
-// Transaction detail dialog
-const selectedTx = ref<TransferDto | null>(null);
-
-function openDetail(tx: TransferDto) {
-  selectedTx.value = tx;
+function isCurrentMonth(tx: TransferDto): boolean {
+  const iso = tx.processedAt ?? tx.initiatedAt;
+  if (!iso) return false;
+  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
-function closeDetail() {
-  selectedTx.value = null;
-}
+const monthlyIncome = computed(() =>
+  transfersStore.transfers
+    .filter((t) => t.direction === 'credit' && isCurrentMonth(t))
+    .reduce((sum, t) => sum + t.amountUzs, 0)
+);
+
+const monthlyExpenses = computed(() =>
+  transfersStore.transfers
+    .filter((t) => t.direction === 'debit' && isCurrentMonth(t))
+    .reduce((sum, t) => sum + t.amountUzs, 0)
+);
 
 function formatAmount(uzs: number) {
   return new Intl.NumberFormat('uz-UZ', { style: 'decimal', maximumFractionDigits: 0 }).format(uzs);
 }
-
-function formatTime(iso: string | null | undefined) {
-  if (!iso) return '—';
-  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatDateTime(iso: string | null | undefined) {
-  if (!iso) return '—';
-  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function txDate(tx: TransferDto) {
-  return formatDateTime(tx.processedAt ?? tx.completedAt ?? tx.initiatedAt);
-}
-
-function statusLabel(status: string) {
-  if (status === 'completed') return "Muvaffaqiyatli o'tkazma";
-  if (status === 'failed') return "Muvaffaqiyatsiz o'tkazma";
-  if (status === 'processing') return 'Jarayonda';
-  return status;
-}
-
-function statusColor(status: string) {
-  if (status === 'completed') return 'positive';
-  if (status === 'failed') return 'negative';
-  return 'warning';
-}
-
-function parseTxDate(iso: string | null | undefined): Date | null {
-  if (!iso) return null;
-  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function txDayKey(tx: TransferDto): string {
-  const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
-  if (!d) return 'unknown';
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-function txDayLabel(tx: TransferDto): string {
-  const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
-  if (!d) return 'Boshqa';
-  const today = new Date();
-  if (isSameDay(d, today)) return 'Bugun';
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(d, yesterday)) return 'Kecha';
-  return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
-}
-
-const groupedTransfers = computed(() => {
-  const groups: { label: string; items: TransferDto[] }[] = [];
-  const seen = new Map<string, { label: string; items: TransferDto[] }>();
-  for (const tx of transfersStore.transfers) {
-    const key = txDayKey(tx);
-    if (!seen.has(key)) {
-      const g = { label: txDayLabel(tx), items: [] as TransferDto[] };
-      groups.push(g);
-      seen.set(key, g);
-    }
-    seen.get(key)!.items.push(tx);
-  }
-  return groups;
-});
 </script>
 
 <template>
-  <q-page class="q-pa-lg">
-    <div style="max-width: 1024px; margin: 0 auto">
-      <!-- Stats -->
-      <div class="row q-col-gutter-md q-mb-xl">
-        <div class="col-12 col-sm-4">
-          <q-card
-            flat
-            bordered
-            class="q-pa-md"
-            style="cursor: pointer"
-            @click="router.push('/cards')"
-          >
-            <p class="text-caption text-grey-6 q-mb-xs">Umumiy balans</p>
-            <div class="row items-center no-wrap">
-              <p class="text-h5 text-weight-bold q-my-none col">
-                {{ balanceVisible ? balanceDisplay : '••••• UZS' }}
-              </p>
-              <q-btn
-                flat
-                round
-                dense
-                :icon="balanceVisible ? 'visibility' : 'visibility_off'"
-                color="grey-6"
-                size="sm"
-                @click.stop="balanceVisible = !balanceVisible"
-              />
-            </div>
-          </q-card>
-        </div>
-      </div>
-
-      <!-- Transaction history -->
-      <div>
-        <p
-          class="text-caption text-weight-bold text-uppercase text-grey-6 q-mb-sm"
-          style="letter-spacing: 0.1em"
-        >
-          Tranzaksiyalar tarixi
-        </p>
-
-        <!-- Loading -->
+  <q-page class="pp-page">
+    <div class="pp-main">
+      <!-- ── Top row: balance + monthly stats ── -->
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+        <!-- Balance card -->
         <div
-          v-if="transfersStore.isLoading && transfersStore.transfers.length === 0"
-          class="row justify-center q-pa-xl"
+          style="
+            position: relative;
+            overflow: hidden;
+            flex: 3 1 420px;
+            min-width: 0;
+            background: linear-gradient(
+              135deg,
+              rgba(41, 190, 140, 0.14) 0%,
+              rgba(247, 244, 237, 0.05) 100%
+            );
+            border: 1px solid rgba(41, 190, 140, 0.28);
+            border-radius: 22px;
+            padding: clamp(24px, 3vw, 34px);
+          "
         >
-          <q-spinner color="primary" size="40px" />
+          <div
+            style="
+              position: absolute;
+              width: 420px;
+              height: 420px;
+              right: -160px;
+              top: -220px;
+              border-radius: 50%;
+              background: radial-gradient(
+                circle,
+                rgba(41, 190, 140, 0.22) 0%,
+                rgba(41, 190, 140, 0) 68%
+              );
+              pointer-events: none;
+            "
+          ></div>
+
+          <div
+            style="
+              position: relative;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 16px;
+            "
+          >
+            <div
+              style="
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: #6fd8a8;
+              "
+            >
+              Umumiy balans
+            </div>
+            <button
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: none;
+                border: 1px solid rgba(247, 244, 237, 0.16);
+                border-radius: 999px;
+                padding: 7px 12px;
+                font-family: Manrope, sans-serif;
+                font-size: 12.5px;
+                font-weight: 600;
+                color: rgba(247, 244, 237, 0.7);
+                cursor: pointer;
+                transition:
+                  background 0.15s,
+                  color 0.15s;
+              "
+              @click="balanceVisible = !balanceVisible"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              {{ balanceVisible ? 'Yashirish' : "Ko'rsatish" }}
+            </button>
+          </div>
+
+          <div
+            style="
+              position: relative;
+              margin-top: 14px;
+              font-family: 'Space Grotesk', sans-serif;
+              font-size: clamp(34px, 4.6vw, 52px);
+              font-weight: 600;
+              letter-spacing: -0.03em;
+              line-height: 1;
+            "
+          >
+            {{ balanceVisible ? balanceDisplay : '•••••••• UZS' }}
+          </div>
+
+          <div
+            style="
+              position: relative;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-top: 22px;
+              padding-top: 20px;
+              border-top: 1px solid rgba(247, 244, 237, 0.12);
+            "
+          >
+            <div
+              style="
+                flex: none;
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
+                background: rgba(41, 190, 140, 0.16);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#29BE8C"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2"></path>
+                <path d="M3 8v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3h-4a2 2 0 0 1 0-4h4"></path>
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 14.5px; font-weight: 600">Mening hamyonim</div>
+              <div style="font-size: 12.5px; color: rgba(247, 244, 237, 0.5); margin-top: 2px">
+                PulsePay hisobi
+              </div>
+            </div>
+            <div
+              style="
+                flex: none;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 19px;
+                font-weight: 600;
+                letter-spacing: -0.015em;
+              "
+            >
+              {{ balanceVisible ? '— UZS' : '•••••• UZS' }}
+            </div>
+          </div>
         </div>
 
-        <!-- Empty state -->
-        <q-card v-else-if="transfersStore.transfers.length === 0" flat bordered>
-          <q-card-section class="column items-center q-pa-xl text-center">
-            <q-icon name="show_chart" size="40px" color="grey-4" />
-            <p class="text-body2 text-weight-medium q-mt-md q-mb-xs">
-              Hozircha tranzaksiyalar yo'q
-            </p>
-            <p class="text-caption text-grey-6 q-mb-none">To'lov tarixi bu yerda ko'rsatiladi.</p>
-          </q-card-section>
-        </q-card>
-
-        <!-- Transaction list -->
-        <template v-else>
-          <template v-for="group in groupedTransfers" :key="group.label">
-            <p class="text-caption text-weight-medium text-grey-6 q-mt-md q-mb-sm">
-              {{ group.label }}
-            </p>
-            <q-list bordered separator rounded>
-              <q-item
-                v-for="tx in group.items"
-                :key="tx.id + (tx.direction ?? '')"
-                v-ripple
-                clickable
-                class="q-py-sm"
-                @click="openDetail(tx)"
-              >
-                <q-item-section avatar>
-                  <q-icon
-                    :name="tx.direction === 'credit' ? 'arrow_downward' : 'arrow_upward'"
-                    :color="tx.direction === 'credit' ? 'positive' : 'negative'"
-                    size="22px"
-                  />
-                </q-item-section>
-
-                <q-item-section>
-                  <q-item-label
-                    class="text-weight-medium"
-                    :class="tx.direction === 'credit' ? 'text-positive' : 'text-negative'"
-                  >
-                    {{ tx.direction === 'credit' ? '+' : '-' }}{{ formatAmount(tx.amountUzs) }} UZS
-                  </q-item-label>
-                  <q-item-label caption>
-                    {{ (tx.direction === 'credit' ? tx.senderName : tx.recipientName) || '—' }}
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section side>
-                  <q-item-label caption>{{
-                    formatTime(tx.processedAt ?? tx.initiatedAt)
-                  }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </template>
-        </template>
+        <!-- Monthly stats card -->
+        <div
+          style="
+            flex: 1 1 260px;
+            min-width: 0;
+            background: rgba(247, 244, 237, 0.045);
+            border: 1px solid rgba(247, 244, 237, 0.1);
+            border-radius: 22px;
+            padding: clamp(20px, 2.4vw, 28px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+          "
+        >
+          <div
+            style="
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.16em;
+              text-transform: uppercase;
+              color: rgba(247, 244, 237, 0.45);
+            "
+          >
+            Bu oyda
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 13.5px; color: rgba(247, 244, 237, 0.6)">Chiqim</div>
+            <div
+              style="
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 24px;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+                color: #ff9c82;
+              "
+            >
+              {{ monthlyExpenses > 0 ? '−' + formatAmount(monthlyExpenses) + ' UZS' : '0 UZS' }}
+            </div>
+          </div>
+          <div style="height: 1px; background: rgba(247, 244, 237, 0.1)"></div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 13.5px; color: rgba(247, 244, 237, 0.6)">Kirim</div>
+            <div
+              style="
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 24px;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+                color: #29be8c;
+              "
+            >
+              {{ monthlyIncome > 0 ? '+' + formatAmount(monthlyIncome) + ' UZS' : '0 UZS' }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Transaction detail dialog -->
-    <q-dialog :model-value="selectedTx !== null" @update:model-value="closeDetail">
-      <q-card style="min-width: 320px; max-width: 480px; width: 100%">
-        <q-card-section class="column items-center q-pt-lg q-pb-sm">
-          <q-icon
-            :name="selectedTx?.status === 'completed' ? 'check_circle' : 'error'"
-            :color="statusColor(selectedTx?.status ?? '')"
-            size="48px"
-          />
-          <p class="text-subtitle1 text-weight-bold q-mt-sm q-mb-none">
-            {{ statusLabel(selectedTx?.status ?? '') }}
-          </p>
-          <p class="text-h5 text-weight-bold q-mt-xs q-mb-none">
-            {{ formatAmount(selectedTx?.amountUzs ?? 0) }} UZS
-          </p>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-list dense class="q-py-sm">
-          <q-item>
-            <q-item-section>
-              <q-item-label caption>Sana</q-item-label>
-              <q-item-label>{{ selectedTx ? txDate(selectedTx) : '—' }}</q-item-label>
-            </q-item-section>
-          </q-item>
-
-          <q-item>
-            <q-item-section>
-              <q-item-label caption>Qabul qiluvchi</q-item-label>
-              <q-item-label>{{ selectedTx?.recipientName || '—' }}</q-item-label>
-              <q-item-label caption class="q-mt-xs" style="font-family: monospace">
-                {{ selectedTx?.recipientMaskedPan || '—' }}
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-
-          <q-item>
-            <q-item-section>
-              <q-item-label caption>Jo'natuvchi</q-item-label>
-              <q-item-label>{{ selectedTx?.senderName || '—' }}</q-item-label>
-              <q-item-label caption class="q-mt-xs" style="font-family: monospace">
-                {{ selectedTx?.senderMaskedPan || '—' }}
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-
-          <q-item>
-            <q-item-section>
-              <q-item-label caption>Komissiya</q-item-label>
-              <q-item-label>
-                {{
-                  selectedTx?.feeAmountUzs
-                    ? formatAmount(selectedTx.feeAmountUzs) + ' UZS'
-                    : '0 UZS'
-                }}
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-
-        <q-card-actions align="right" class="q-pb-md q-pr-md">
-          <q-btn flat no-caps label="Yopish" color="primary" @click="closeDetail" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>

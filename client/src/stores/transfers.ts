@@ -24,9 +24,16 @@ export const useTransfersStore = defineStore('transfers', () => {
   async function sendMoney(payload: InitiateTransferPayload): Promise<TransferDto> {
     isLoading.value = true;
     try {
-      const initiated = await initiateTransfer(payload);
-      // Auto-confirm: skip OTP in stub phase — backend accepts any 6-digit code
-      const completed = await confirmTransfer(initiated.id, '000000');
+      return await initiateTransfer(payload);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function confirmOtp(transferId: string, code: string): Promise<TransferDto> {
+    isLoading.value = true;
+    try {
+      const completed = await confirmTransfer(transferId, code);
       transfers.value = [completed, ...transfers.value];
       return completed;
     } finally {
@@ -34,5 +41,5 @@ export const useTransfersStore = defineStore('transfers', () => {
     }
   }
 
-  return { transfers, isLoading, fetchError, fetchTransfers, sendMoney };
+  return { transfers, isLoading, fetchError, fetchTransfers, sendMoney, confirmOtp };
 });

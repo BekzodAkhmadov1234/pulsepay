@@ -64,6 +64,13 @@ public class FeeRuleAdminController {
         return ResponseEntity.ok(toResponse(rule));
     }
 
+    @Operation(summary = "Re-activate a fee rule (clears effective_to, runs overlap check)")
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<FeeRuleResponse> activate(@PathVariable UUID id) {
+        FeeRule rule = manageFeeRulePort.activate(id);
+        return ResponseEntity.ok(toResponse(rule));
+    }
+
     @Operation(summary = "Supersede a fee rule — deactivates old and creates new replacement atomically")
     @PutMapping("/{id}/supersede")
     public ResponseEntity<FeeRuleResponse> supersede(

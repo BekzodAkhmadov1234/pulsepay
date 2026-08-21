@@ -12,8 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-const BASE_URL =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api/v1';
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api/v1';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();

@@ -1,0 +1,9 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 105-merchant-business-id-nullable
+      author: pulsepay
+      comment: "Make merchants.business_id nullable — Stage 2 merchants have no business yet"
+      changes:
+        - sql:
+            sql: ALTER TABLE merchants ALTER COLUMN business_id DROP NOT NULL;

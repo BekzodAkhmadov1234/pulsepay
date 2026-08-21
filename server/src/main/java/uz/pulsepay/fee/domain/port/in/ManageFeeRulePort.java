@@ -49,6 +49,9 @@ public interface ManageFeeRulePort {
     /** Soft-deactivate: sets is_active=false and effective_to=now. */
     FeeRule deactivate(UUID id);
 
+    /** Re-activate: sets is_active=true and effective_to=null. Runs overlap check. */
+    FeeRule activate(UUID id);
+
     /**
      * Atomically deactivates the old rule and creates a replacement.
      * The replacement inherits all parameters from the command.

@@ -38,12 +38,18 @@ databaseChangeLog:
       file: db/changelog/changes/stage-2/102-qr-paymentlink-tables.yaml
   - include:
       file: db/changelog/changes/stage-2/103-settlement-merchant.yaml
+  - include:
+      file: db/changelog/changes/stage-2/104-merchant-auth-columns.yaml
 
   # Stage 3 — business / bank-rail / full reconciliation
   - include:
       file: db/changelog/changes/stage-3/201-business-tables.yaml
   - include:
       file: db/changelog/changes/stage-3/202-settlement-network.yaml
+
+  # Stage 2 fixups that depend on Stage 3 schema
+  - include:
+      file: db/changelog/changes/stage-2/105-merchant-business-id-nullable.yaml
 
   # Seed data
   - include:
@@ -69,4 +75,10 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/seed/s10-admin-seed.yaml
   - include:
+      file: db/changelog/changes/seed/s11-translate-fee-rule-names.yaml
+  - include:
       file: db/changelog/changes/stage-1/017-route-processor-names.yaml
+  - include:
+      file: db/changelog/changes/stage-1/018-expand-route-networks.yaml
+  - include:
+      file: db/changelog/changes/seed/s12-c2b-activate.yaml

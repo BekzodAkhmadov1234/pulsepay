@@ -129,6 +129,42 @@ class ArchitectureTest {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Stage 2 boundary: merchant and settlement must not import Stage 3
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @Test
+    void merchant_must_not_import_business() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.merchant..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
+        rule.check(importedClasses);
+    }
+
+    @Test
+    void settlement_must_not_import_business() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.settlement..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
+        rule.check(importedClasses);
+    }
+
+    @Test
+    void stage1_card_must_not_import_merchant() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.card..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
+        rule.check(importedClasses);
+    }
+
+    @Test
+    void stage1_routing_must_not_import_merchant() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.routing..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
+        rule.check(importedClasses);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Ledger has no REST inbound adapter
     // ──────────────────────────────────────────────────────────────────────────
 

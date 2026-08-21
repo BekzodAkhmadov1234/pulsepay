@@ -30,9 +30,10 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
   const body: unknown = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const err = body as { message?: string; error?: string };
-    const message = err.message ?? err.error ?? `Request failed with status ${res.status}`;
-    if (res.status === 401) {
+    const err = body as { message?: string; error?: string; fieldErrors?: string[] };
+    const base = err.message ?? err.error ?? `Request failed with status ${res.status}`;
+    const message = err.fieldErrors?.length ? `${base}: ${err.fieldErrors.join('; ')}` : base;
+    if (res.status === 401 || res.status === 403) {
       clearAdminToken();
       window.location.href = '/admin/login';
     }

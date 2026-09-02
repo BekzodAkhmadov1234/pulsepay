@@ -5,7 +5,7 @@ import { useCardsStore } from '@/stores/cards';
 import { useTransfersStore } from '@/stores/transfers';
 import { useAuthStore } from '@/stores/auth';
 import { searchUserByPhone, searchUserByCard } from '@/lib/api/users';
-import { fetchDevOtp } from '@/lib/api/transfers';
+import { fetchDevOtp, previewFee } from '@/lib/api/transfers';
 import { ApiError } from '@/lib/api/client';
 import type { RecipientDto } from '@/lib/api/users';
 
@@ -115,6 +115,32 @@ const amountUzs = computed(() => {
 const sendError = ref('');
 const fieldErrors = ref<Record<string, string>>({});
 
+// ── Fee preview (P2P send) ─────────────────────────────────────
+const p2pFeeUzs = ref<number | null>(null);
+let p2pFeeTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch([amountUzs, senderCardId, recipientCardId], () => {
+  if (p2pFeeTimer) clearTimeout(p2pFeeTimer);
+  p2pFeeUzs.value = null;
+  const amount = amountUzs.value;
+  const srcCard = verifiedCards.value.find((c) => c.id === senderCardId.value);
+  const dstCard = recipient.value?.cards.find((c) => c.id === recipientCardId.value);
+  if (!amount || !srcCard || !dstCard) return;
+  p2pFeeTimer = setTimeout(async () => {
+    try {
+      const res = await previewFee({
+        amountUzs: amount,
+        sourceNetwork: srcCard.cardNetwork ?? 'uzcard',
+        destNetwork: dstCard.cardNetwork ?? 'uzcard',
+        transferTypeId: 1,
+      });
+      p2pFeeUzs.value = res.feeAmountUzs;
+    } catch {
+      /* ignore — show nothing */
+    }
+  }, 400);
+});
+
 // ── OTP step ──────────────────────────────────────────────────
 const isOtpStep = ref(false);
 const pendingTransferId = ref('');
@@ -190,6 +216,32 @@ const betweenAmount = ref('');
 const betweenNote = ref('');
 const betweenNoteOk = ref(false);
 
+// ── Fee preview (between cards) ───────────────────────────────
+const betweenFeeUzs = ref<number | null>(null);
+let betweenFeeTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch([betweenAmount, fromIdx, toIdx], () => {
+  if (betweenFeeTimer) clearTimeout(betweenFeeTimer);
+  betweenFeeUzs.value = null;
+  const amount = betweenAmountValue.value;
+  const fromCard = ownedCards.value[fromIdx.value];
+  const toCard = ownedCards.value[toIdx.value];
+  if (!amount || same.value || !fromCard || !toCard) return;
+  betweenFeeTimer = setTimeout(async () => {
+    try {
+      const res = await previewFee({
+        amountUzs: amount,
+        sourceNetwork: fromCard.cardNetwork ?? 'uzcard',
+        destNetwork: toCard.cardNetwork ?? 'uzcard',
+        transferTypeId: 1,
+      });
+      betweenFeeUzs.value = res.feeAmountUzs;
+    } catch {
+      /* ignore */
+    }
+  }, 400);
+});
+
 function swapBetween() {
   const tmp = fromIdx.value;
   fromIdx.value = toIdx.value;
@@ -203,15 +255,45 @@ function onBetweenAmount(e: Event) {
   betweenNote.value = '';
 }
 
-function confirmBetween() {
+async function confirmBetween() {
+  betweenNote.value = '';
+  betweenNoteOk.value = false;
   const v = parseInt(betweenAmount.value.replace(/,/g, ''), 10);
   if (!v) {
     betweenNote.value = 'Summani kiriting.';
-    betweenNoteOk.value = false;
     return;
   }
-  betweenNote.value = 'Bu funksiya tez orada ishga tushadi.';
-  betweenNoteOk.value = false;
+  if (same.value || !authStore.user?.id) return;
+
+  const fromCard = ownedCards.value[fromIdx.value];
+  const toCard = ownedCards.value[toIdx.value];
+  if (!fromCard || !toCard) return;
+
+  try {
+    const initiated = await transfersStore.sendMoney({
+      senderInstrumentId: fromCard.id,
+      senderCardNetwork: fromCard.cardNetwork ?? 'uzcard',
+      recipientId: authStore.user.id,
+      recipientInstrumentId: toCard.id,
+      recipientCardNetwork: toCard.cardNetwork ?? 'uzcard',
+      amountUzs: v,
+      transferTypeId: 1,
+      channel: 'mobile_app',
+      idempotencyKey: crypto.randomUUID(),
+    });
+    pendingTransferId.value = initiated.id;
+    isOtpStep.value = true;
+    if (isDev && authStore.user) {
+      try {
+        const res = await fetchDevOtp(authStore.user.phoneE164);
+        otpCode.value = res.code;
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch (err) {
+    betweenNote.value = err instanceof ApiError ? err.message : "O'tkazma muvaffaqiyatsiz.";
+  }
 }
 
 // ── Starred contacts (persisted in localStorage) ──────────────
@@ -727,7 +809,7 @@ function onAmountInput(e: Event) {
               <button
                 type="button"
                 title="Davom etish"
-                :disabled="same"
+                :disabled="same || transfersStore.isLoading"
                 style="
                   display: flex;
                   align-items: center;
@@ -740,13 +822,15 @@ function onAmountInput(e: Event) {
                   transition: background 0.15s;
                 "
                 :style="{
-                  background: same ? 'rgba(247,244,237,0.08)' : '#29BE8C',
-                  color: same ? 'rgba(247,244,237,0.35)' : '#0E211C',
-                  cursor: same ? 'not-allowed' : 'pointer',
+                  background:
+                    same || transfersStore.isLoading ? 'rgba(247,244,237,0.08)' : '#29BE8C',
+                  color: same || transfersStore.isLoading ? 'rgba(247,244,237,0.35)' : '#0E211C',
+                  cursor: same || transfersStore.isLoading ? 'not-allowed' : 'pointer',
                 }"
                 @click="confirmBetween"
               >
                 <svg
+                  v-if="!transfersStore.isLoading"
                   width="20"
                   height="20"
                   viewBox="0 0 24 24"
@@ -758,10 +842,15 @@ function onAmountInput(e: Event) {
                 >
                   <path d="M5 12h14m0 0-6-6m6 6-6 6"></path>
                 </svg>
+                <div
+                  v-else
+                  class="pp-spinner"
+                  style="width: 20px; height: 20px; border-width: 2px"
+                ></div>
               </button>
             </div>
             <div
-              v-if="!same && betweenAmountValue > 0"
+              v-if="!same && betweenAmountValue > 0 && betweenFeeUzs !== null"
               style="
                 display: flex;
                 align-items: center;
@@ -775,7 +864,7 @@ function onAmountInput(e: Event) {
               <div style="color: rgba(247, 244, 237, 0.55)">
                 Komissiya:
                 <strong style="color: #f7f4ed; font-weight: 600"
-                  >{{ Math.round(betweenAmountValue * 0.011).toLocaleString('en-US') }} UZS</strong
+                  >{{ betweenFeeUzs.toLocaleString('en-US') }} UZS</strong
                 >
               </div>
               <div style="color: rgba(247, 244, 237, 0.55)">
@@ -783,7 +872,7 @@ function onAmountInput(e: Event) {
               </div>
             </div>
             <div
-              v-if="same || !betweenAmountValue"
+              v-if="same || !betweenAmountValue || betweenNote"
               style="margin-top: 12px; font-size: 13px"
               :style="{
                 color: same
@@ -1272,7 +1361,29 @@ function onAmountInput(e: Event) {
               {{ sendError }}
             </div>
             <div
-              v-if="!fieldErrors.amount && !sendError"
+              v-if="amountUzs > 0 && p2pFeeUzs !== null && !fieldErrors.amount && !sendError"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+                margin-top: 12px;
+                font-size: 13px;
+              "
+            >
+              <div style="color: rgba(247, 244, 237, 0.55)">
+                Komissiya:
+                <strong style="color: #f7f4ed; font-weight: 600"
+                  >{{ p2pFeeUzs.toLocaleString('en-US') }} UZS</strong
+                >
+              </div>
+              <div style="color: rgba(247, 244, 237, 0.55)">
+                Cashback: <strong style="color: #29be8c; font-weight: 600">0 UZS</strong>
+              </div>
+            </div>
+            <div
+              v-else-if="!fieldErrors.amount && !sendError"
               style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.4)"
             >
               Komissiya qo'llanilishi mumkin
@@ -1332,6 +1443,75 @@ function onAmountInput(e: Event) {
           </span>
           <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600"
             >Kartalarim orasida</span
+          >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="rgba(247,244,237,0.45)"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="flex: none"
+          >
+            <path d="m9 6 6 6-6 6"></path>
+          </svg>
+        </button>
+
+        <!-- Bank transfer shortcut -->
+        <button
+          type="button"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            max-width: 640px;
+            margin-top: 10px;
+            text-align: left;
+            background: rgba(247, 244, 237, 0.045);
+            border: 1px solid rgba(247, 244, 237, 0.12);
+            border-radius: 16px;
+            padding: 16px 18px;
+            font-family: Manrope, sans-serif;
+            color: #f7f4ed;
+            cursor: pointer;
+            transition:
+              background 0.15s,
+              border-color 0.15s;
+          "
+          @click="router.push('/send/bank')"
+        >
+          <span
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex: none;
+              width: 38px;
+              height: 38px;
+              border-radius: 12px;
+              background: rgba(41, 190, 140, 0.16);
+              color: #29be8c;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="10" width="18" height="11" rx="2"></rect>
+              <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
+            </svg>
+          </span>
+          <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600"
+            >Bank hisobiga o'tkazma</span
           >
           <svg
             width="17"

@@ -1,7 +1,9 @@
 package uz.pulsepay.transfer.domain.model;
 
 import org.junit.jupiter.api.Test;
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.transfer.TransferStateMachine;
+import uz.pulsepay.domain.transfer.TransferStatus;
+import uz.pulsepay.domain.shared.DomainException;
 
 import static org.assertj.core.api.Assertions.*;
 

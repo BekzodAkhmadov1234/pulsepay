@@ -1,6 +1,6 @@
 package uz.pulsepay.identity.domain.exception;
 
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.shared.DomainException;
 
 /**
  * Thrown when a registration attempt supplies a phone number that is already associated

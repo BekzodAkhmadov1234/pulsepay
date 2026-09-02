@@ -5,6 +5,7 @@ import type { RegisterPayload, LoginPayload } from '@/lib/api/auth';
 import { getToken, setToken, clearToken, decodeJwtPayload, isTokenExpired } from '@/lib/token';
 
 export interface AuthUser {
+  id: string;
   phoneE164: string;
   fullName: string;
   kycLevel: string;
@@ -20,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
     const payload = decodeJwtPayload(token);
     if (payload) {
       user.value = {
+        id: (payload.sub ?? '') as string,
         phoneE164: (payload.phone_e164 ?? payload.sub ?? '') as string,
         fullName: (payload.full_name ?? '') as string,
         kycLevel: (payload.kyc_level ?? 'basic') as string,

@@ -1,10 +1,10 @@
 package uz.pulsepay.identity.domain.exception;
 
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.shared.DomainException;
 
 /**
  * Thrown when a login or sensitive operation is attempted on an account whose
- * {@link uz.pulsepay.identity.domain.model.User#isActive()} returns {@code false}
+ * {@link uz.pulsepay.domain.identity.User#isActive()} returns {@code false}
  * — i.e. the account status is not {@code "active"} or the {@code closedAt} field is set.
  *
  * <p>Maps to <b>HTTP 403 Forbidden</b> via {@link uz.pulsepay.shared.adapter.in.rest.GlobalExceptionHandler}.

@@ -1,7 +1,6 @@
 import { ApiError } from './client';
 
-const ADMIN_BASE =
-  (import.meta.env.VITE_ADMIN_API_URL as string | undefined) ?? 'http://localhost:8080/admin/v1';
+const ADMIN_BASE = (import.meta.env.VITE_ADMIN_API_URL as string | undefined) ?? '/admin/v1';
 
 const ADMIN_TOKEN_KEY = 'pp_admin_token';
 

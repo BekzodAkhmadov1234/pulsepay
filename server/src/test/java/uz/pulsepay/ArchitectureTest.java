@@ -11,8 +11,16 @@ import java.nio.file.Paths;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
- * ArchUnit tests enforcing stage boundaries and hexagonal architecture rules.
- * Risk #9 mitigation: ensures no Stage 1 package imports from Stage 2/3 packages.
+ * ArchUnit tests enforcing the N-Tier Layered Architecture rules.
+ *
+ * Layer ordering (top to bottom):
+ *   controller → service → repository → domain
+ *
+ * Key invariants:
+ *  - Controllers must not access repositories directly (must go through service)
+ *  - Services must not access controllers
+ *  - Domain layer must not import service, controller, or repository
+ *  - Ledger has no REST endpoint (LedgerService is called in-process only)
  */
 class ArchitectureTest {
 
@@ -20,226 +28,84 @@ class ArchitectureTest {
 
     @BeforeAll
     static void importClasses() {
-        // importPath is used instead of importPackages to reliably locate classes
-        // in the Gradle build directory during test execution.
         importedClasses = new ClassFileImporter()
                 .importPath(Paths.get("build/classes/java/main"));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Stage boundary: Stage 1 must not import Stage 2/3 packages
+    // Layer dependency rules
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    void stage1_transfer_must_not_import_merchant() {
+    void controllers_must_not_access_repositories_directly() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
+                .that().resideInAPackage("uz.pulsepay.controller..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.repository..");
         rule.check(importedClasses);
     }
 
     @Test
-    void stage1_transfer_must_not_import_business() {
+    void services_must_not_access_controllers() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
+                .that().resideInAPackage("uz.pulsepay.service..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.controller..");
         rule.check(importedClasses);
     }
 
     @Test
-    void stage1_transfer_must_not_import_settlement() {
+    void domain_must_not_import_service_layer() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.settlement..");
+                .that().resideInAPackage("uz.pulsepay.domain..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.service..");
         rule.check(importedClasses);
     }
 
     @Test
-    void stage1_identity_must_not_import_merchant() {
+    void domain_must_not_import_repository_layer() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.identity..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
+                .that().resideInAPackage("uz.pulsepay.domain..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.repository..");
         rule.check(importedClasses);
     }
 
     @Test
-    void identity_must_not_import_card() {
-        // identity → shared only; card deactivation cross-module via CardDeactivationPort in shared
+    void domain_must_not_import_controller_layer() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.identity..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.card..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_ledger_must_not_import_merchant() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.ledger..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_fee_must_not_import_merchant() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.fee..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_fee_must_not_import_business() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.fee..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_fee_must_not_import_settlement() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.fee..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.settlement..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void ledger_must_not_import_fee() {
-        // LedgerService accepts feeRecipient as String; no direct fee-module coupling
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.ledger..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.fee..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_limit_must_not_import_merchant() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.limit..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_compliance_must_not_import_merchant() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.compliance..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
+                .that().resideInAPackage("uz.pulsepay.domain..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.controller..");
         rule.check(importedClasses);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Stage 2 boundary: merchant and settlement must not import Stage 3
+    // Ledger has no REST endpoint — in-process only
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    void merchant_must_not_import_business() {
+    void ledger_service_has_no_rest_controller() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.merchant..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void settlement_must_not_import_business() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.settlement..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.business..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_card_must_not_import_merchant() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.card..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void stage1_routing_must_not_import_merchant() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.routing..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.merchant..");
-        rule.check(importedClasses);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Ledger has no REST inbound adapter
-    // ──────────────────────────────────────────────────────────────────────────
-
-    @Test
-    void ledger_has_no_rest_controller() {
-        // ledger.adapter.in is intentionally empty; scan the whole ledger package so
-        // the rule has classes to check (satisfying failOnEmptyShould).
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.ledger..")
+                .that().resideInAPackage("uz.pulsepay.service..")
+                .and().haveSimpleName("LedgerService")
                 .should().beAnnotatedWith("org.springframework.web.bind.annotation.RestController");
-        rule.check(importedClasses);
+        rule.allowEmptyShould(true).check(importedClasses);
+    }
+
+    @Test
+    void no_controller_is_named_ledger_controller() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage("uz.pulsepay.controller..")
+                .should().haveSimpleName("LedgerController");
+        rule.allowEmptyShould(true).check(importedClasses);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // No module imports another module's adapter layer
-    // (only domain.port interfaces are cross-module)
+    // Utils layer must not access business layers
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    void transfer_must_not_import_identity_adapter() {
+    void utils_security_must_not_access_service_layer() {
         ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.identity.adapter..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void transfer_must_not_import_ledger_adapter() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.ledger.adapter..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void transfer_must_not_import_fee_adapter() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.fee.adapter..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void transfer_must_not_import_limit_adapter() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.limit.adapter..");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void transfer_must_not_import_compliance_adapter() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("uz.pulsepay.transfer..")
-                .should().accessClassesThat().resideInAPackage("uz.pulsepay.compliance.adapter..");
-        rule.check(importedClasses);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Domain model must not contain JPA or Jackson annotations
-    // ──────────────────────────────────────────────────────────────────────────
-
-    @Test
-    void domain_models_must_not_use_jpa_annotations() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("..domain.model..")
-                .should().beAnnotatedWith("jakarta.persistence.Entity");
-        rule.check(importedClasses);
-    }
-
-    @Test
-    void domain_models_must_not_use_table_annotation() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage("..domain.model..")
-                .should().beAnnotatedWith("jakarta.persistence.Table");
+                .that().resideInAPackage("uz.pulsepay.utils.security..")
+                .should().accessClassesThat().resideInAPackage("uz.pulsepay.service..");
         rule.check(importedClasses);
     }
 }

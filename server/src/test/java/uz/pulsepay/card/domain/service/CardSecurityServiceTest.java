@@ -2,11 +2,13 @@ package uz.pulsepay.card.domain.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uz.pulsepay.card.domain.model.Card;
-import uz.pulsepay.card.domain.model.CardStatus;
-import uz.pulsepay.card.domain.port.out.CardRepository;
-import uz.pulsepay.shared.exception.DomainException;
-import uz.pulsepay.shared.exception.NotFoundException;
+import uz.pulsepay.domain.card.Card;
+import uz.pulsepay.domain.card.CardEntity;
+import uz.pulsepay.domain.card.CardStatus;
+import uz.pulsepay.domain.shared.DomainException;
+import uz.pulsepay.domain.shared.NotFoundException;
+import uz.pulsepay.repository.CardRepository;
+import uz.pulsepay.service.CardService;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -23,7 +25,7 @@ import static org.mockito.Mockito.*;
 class CardSecurityServiceTest {
 
     private CardRepository cardRepository;
-    private CardSecurityService service;
+    private CardService service;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID CARD_ID = UUID.randomUUID();
@@ -31,7 +33,7 @@ class CardSecurityServiceTest {
     @BeforeEach
     void setUp() {
         cardRepository = mock(CardRepository.class);
-        service = new CardSecurityService(cardRepository);
+        service = new CardService(cardRepository);
     }
 
     @Test
@@ -56,9 +58,7 @@ class CardSecurityServiceTest {
     void reactivateCard_transitions_inactive_to_verified() {
         Card inactiveCard = card(CARD_ID, CardStatus.INACTIVE);
         when(cardRepository.findByIdAndOwnerUserId(CARD_ID, USER_ID))
-                .thenReturn(Optional.of(inactiveCard));
-        when(cardRepository.updateStatus(CARD_ID, CardStatus.VERIFIED))
-                .thenReturn(card(CARD_ID, CardStatus.VERIFIED));
+                .thenReturn(Optional.of(CardEntity.fromDomain(inactiveCard)));
 
         service.reactivateCard(CARD_ID, USER_ID);
 
@@ -78,9 +78,9 @@ class CardSecurityServiceTest {
     void reactivateCard_throws_when_card_is_blocked_illegal_transition() {
         Card blockedCard = card(CARD_ID, CardStatus.BLOCKED);
         when(cardRepository.findByIdAndOwnerUserId(CARD_ID, USER_ID))
-                .thenReturn(Optional.of(blockedCard));
+                .thenReturn(Optional.of(CardEntity.fromDomain(blockedCard)));
 
-        // BLOCKED → VERIFIED is illegal (BLOCKED is terminal)
+        // BLOCKED card fails the INACTIVE status check before state machine
         assertThatThrownBy(() -> service.reactivateCard(CARD_ID, USER_ID))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("BLOCKED");
@@ -92,7 +92,7 @@ class CardSecurityServiceTest {
     void reactivateCard_throws_when_card_is_unverified_illegal_transition() {
         Card unverifiedCard = card(CARD_ID, CardStatus.UNVERIFIED);
         when(cardRepository.findByIdAndOwnerUserId(CARD_ID, USER_ID))
-                .thenReturn(Optional.of(unverifiedCard));
+                .thenReturn(Optional.of(CardEntity.fromDomain(unverifiedCard)));
 
         // UNVERIFIED → VERIFIED goes through verification flow, not reactivation
         assertThatThrownBy(() -> service.reactivateCard(CARD_ID, USER_ID))

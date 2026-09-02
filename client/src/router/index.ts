@@ -42,6 +42,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/send/bank',
+      name: 'bank-transfer',
+      component: () => import('../views/BankTransferView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/transfers',
       name: 'transfers',
       component: () => import('../views/TransfersView.vue'),

@@ -1,7 +1,9 @@
 package uz.pulsepay.card.domain.model;
 
 import org.junit.jupiter.api.Test;
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.card.CardStateMachine;
+import uz.pulsepay.domain.card.CardStatus;
+import uz.pulsepay.domain.shared.DomainException;
 
 import static org.assertj.core.api.Assertions.*;
 

@@ -1,6 +1,6 @@
 package uz.pulsepay.identity.domain.exception;
 
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.shared.DomainException;
 
 /**
  * Thrown when OTP verification fails for any of the following reasons:

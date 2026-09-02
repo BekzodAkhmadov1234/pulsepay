@@ -45,3 +45,18 @@ export function listTransfers(): Promise<TransferDto[]> {
 export function fetchDevOtp(phoneE164: string): Promise<{ code: string }> {
   return apiClient.get<{ code: string }>(`/dev/otp/${encodeURIComponent(phoneE164)}`);
 }
+
+export function previewFee(params: {
+  amountUzs: number;
+  sourceNetwork: string;
+  destNetwork: string;
+  transferTypeId?: number;
+}): Promise<{ feeAmountUzs: number }> {
+  const q = new URLSearchParams({
+    amountUzs: String(params.amountUzs),
+    sourceNetwork: params.sourceNetwork,
+    destNetwork: params.destNetwork,
+    transferTypeId: String(params.transferTypeId ?? 1),
+  });
+  return apiClient.get<{ feeAmountUzs: number }>(`/transfers/fee-preview?${q}`);
+}

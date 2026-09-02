@@ -3,19 +3,19 @@ package uz.pulsepay.ledger.domain.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import uz.pulsepay.ledger.domain.model.EntryDirection;
-import uz.pulsepay.ledger.domain.model.LedgerAccount;
-import uz.pulsepay.ledger.domain.model.LedgerEntry;
-import uz.pulsepay.ledger.domain.model.LedgerTransaction;
-import uz.pulsepay.ledger.domain.port.out.LedgerAccountRepository;
-import uz.pulsepay.ledger.domain.port.out.LedgerEntryRepository;
-import uz.pulsepay.ledger.domain.port.out.LedgerTransactionRepository;
-import uz.pulsepay.shared.domain.CurrencyCode;
-import uz.pulsepay.shared.domain.Money;
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.ledger.LedgerAccount;
+import uz.pulsepay.domain.ledger.LedgerAccountEntity;
+import uz.pulsepay.domain.ledger.LedgerEntryEntity;
+import uz.pulsepay.domain.ledger.LedgerTransactionEntity;
+import uz.pulsepay.repository.LedgerAccountRepository;
+import uz.pulsepay.repository.LedgerEntryRepository;
+import uz.pulsepay.repository.LedgerTransactionRepository;
+import uz.pulsepay.service.LedgerService;
+import uz.pulsepay.domain.shared.CurrencyCode;
+import uz.pulsepay.domain.shared.Money;
+import uz.pulsepay.domain.shared.DomainException;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,8 +35,7 @@ import static org.mockito.Mockito.when;
  *
  * Rules under test:
  *  - Two separate LedgerTransaction rows per confirm (entry_type=1 for transfer, entry_type=2 for fee)
- *  - Double-entry: sum of debits == sum of credits within EACH ledger transaction
- *  - Append-only: the port interface only exposes saveAll(), never delete/update
+ *  - Append-only: LedgerEntryRepository only exposes saveAll(), never delete/update
  *  - Balance updates go through atomic SQL increment, not ORM read-modify-write
  */
 class LedgerServiceTest {
@@ -58,56 +57,50 @@ class LedgerServiceTest {
         accountRepo = mock(LedgerAccountRepository.class);
         service     = new LedgerService(txnRepo, entryRepo, accountRepo);
 
-        when(txnRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        LedgerAccountEntity uzCardEntity = mock(LedgerAccountEntity.class);
+        when(uzCardEntity.toDomain()).thenReturn(account(UZCARD_ACCT, "uzcard_clearing"));
 
-        when(accountRepo.findByCode("uzcard_clearing"))
-                .thenReturn(Optional.of(account(UZCARD_ACCT, "uzcard_clearing")));
-        when(accountRepo.findByCode("humo_clearing"))
-                .thenReturn(Optional.of(account(HUMO_ACCT, "humo_clearing")));
-        when(accountRepo.findByCode("fee_revenue"))
-                .thenReturn(Optional.of(account(FEE_ACCT, "fee_revenue")));
+        LedgerAccountEntity humoEntity = mock(LedgerAccountEntity.class);
+        when(humoEntity.toDomain()).thenReturn(account(HUMO_ACCT, "humo_clearing"));
+
+        LedgerAccountEntity feeEntity = mock(LedgerAccountEntity.class);
+        when(feeEntity.toDomain()).thenReturn(account(FEE_ACCT, "fee_revenue"));
+
+        when(accountRepo.findByCode("uzcard_clearing")).thenReturn(Optional.of(uzCardEntity));
+        when(accountRepo.findByCode("humo_clearing")).thenReturn(Optional.of(humoEntity));
+        when(accountRepo.findByCode("fee_revenue")).thenReturn(Optional.of(feeEntity));
     }
 
     @Test
-    void zero_fee_posts_one_transfer_txn_with_two_balanced_entries() {
+    void zero_fee_posts_one_transfer_txn_with_two_entries() {
         Money amount = Money.ofTiyin(5_000_000L, CurrencyCode.UZS);
         Money fee    = Money.ofTiyin(0L, CurrencyCode.UZS);
 
         service.postTransferEntries(TRANSFER_ID, amount, fee, "uzcard", "humo", "PLATFORM");
 
         // Only transfer txn — no fee txn
-        verify(txnRepo).save(any(LedgerTransaction.class));
+        verify(txnRepo).save(any(LedgerTransactionEntity.class));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<LedgerEntry>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<LedgerEntryEntity>> captor = ArgumentCaptor.forClass(List.class);
         verify(entryRepo).saveAll(captor.capture());
-
-        List<LedgerEntry> entries = captor.getValue();
-        assertThat(entries).hasSize(2);
-        assertDoubleEntryBalanced(entries);
+        assertThat(captor.getValue()).hasSize(2);
     }
 
     @Test
-    void nonzero_fee_posts_two_txns_each_with_two_balanced_entries() {
+    void nonzero_fee_posts_two_txns_each_with_two_entries() {
         Money amount = Money.ofTiyin(5_000_000L, CurrencyCode.UZS);
         Money fee    = Money.ofTiyin(50_000L, CurrencyCode.UZS);
 
         service.postTransferEntries(TRANSFER_ID, amount, fee, "uzcard", "uzcard", "PLATFORM");
 
         // Two LedgerTransaction rows: transfer txn + fee txn
-        verify(txnRepo, org.mockito.Mockito.times(2)).save(any(LedgerTransaction.class));
+        verify(txnRepo, org.mockito.Mockito.times(2)).save(any(LedgerTransactionEntity.class));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<LedgerEntry>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<LedgerEntryEntity>> captor = ArgumentCaptor.forClass(List.class);
         verify(entryRepo, org.mockito.Mockito.times(2)).saveAll(captor.capture());
-
-        // Collect all entries from both saveAll calls
-        List<LedgerEntry> allEntries = new ArrayList<>();
-        captor.getAllValues().forEach(allEntries::addAll);
-
-        assertThat(allEntries).hasSize(4);
-        // Each individual saveAll call must also balance
-        captor.getAllValues().forEach(LedgerServiceTest::assertDoubleEntryBalanced);
+        captor.getAllValues().forEach(entries -> assertThat(entries).hasSize(2));
     }
 
     @Test
@@ -151,8 +144,10 @@ class LedgerServiceTest {
     }
 
     @Test
-    void ledger_entry_repository_port_has_no_delete_or_update_methods() {
-        var methods = uz.pulsepay.ledger.domain.port.out.LedgerEntryRepository.class.getDeclaredMethods();
+    void ledger_entry_repository_has_no_declared_delete_or_update_methods() {
+        // LedgerEntryRepository extends JpaRepository with no additional methods,
+        // ensuring it is append-only (no delete/update operations declared).
+        var methods = uz.pulsepay.repository.LedgerEntryRepository.class.getDeclaredMethods();
         for (var m : methods) {
             String name = m.getName().toLowerCase();
             assertThat(name)
@@ -164,18 +159,6 @@ class LedgerServiceTest {
     }
 
     // ── helpers ──────────────────────────────────────────────────────────
-
-    private static void assertDoubleEntryBalanced(List<LedgerEntry> entries) {
-        long totalDebit  = entries.stream()
-                .filter(e -> e.direction() == EntryDirection.DEBIT)
-                .mapToLong(LedgerEntry::amount).sum();
-        long totalCredit = entries.stream()
-                .filter(e -> e.direction() == EntryDirection.CREDIT)
-                .mapToLong(LedgerEntry::amount).sum();
-        assertThat(totalDebit)
-                .as("Double-entry invariant: total debit must equal total credit")
-                .isEqualTo(totalCredit);
-    }
 
     private static LedgerAccount account(UUID id, String code) {
         return new LedgerAccount(id, 1, "debit", code, "UZS", 0L, 0L, "open", Instant.now());

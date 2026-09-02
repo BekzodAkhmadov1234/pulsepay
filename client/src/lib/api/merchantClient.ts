@@ -1,8 +1,7 @@
 import { ApiError } from './client';
 
 const MERCHANT_BASE =
-  (import.meta.env.VITE_MERCHANT_API_URL as string | undefined) ??
-  'http://localhost:8080/merchant/v1';
+  (import.meta.env.VITE_MERCHANT_API_URL as string | undefined) ?? '/merchant/v1';
 
 const MERCHANT_TOKEN_KEY = 'pp_merchant_token';
 

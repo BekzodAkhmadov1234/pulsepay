@@ -3,19 +3,22 @@ package uz.pulsepay.fee.application.usecase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uz.pulsepay.fee.domain.model.FeePayer;
-import uz.pulsepay.fee.domain.model.FeeRecipient;
-import uz.pulsepay.fee.domain.model.FeeRule;
-import uz.pulsepay.fee.domain.model.FeeRuleTier;
-import uz.pulsepay.fee.domain.model.FeeType;
-import uz.pulsepay.fee.domain.port.in.ManageFeeRulePort.AddTierCommand;
-import uz.pulsepay.fee.domain.port.in.ManageFeeRulePort.CreateFeeRuleCommand;
-import uz.pulsepay.fee.domain.port.out.FeeRuleRepository;
-import uz.pulsepay.fee.domain.port.out.FeeRuleTierRepository;
-import uz.pulsepay.shared.audit.AuditContext;
-import uz.pulsepay.shared.exception.ConflictException;
-import uz.pulsepay.shared.exception.DomainException;
-import uz.pulsepay.shared.exception.NotFoundException;
+import uz.pulsepay.domain.fee.FeePayer;
+import uz.pulsepay.domain.fee.FeeRecipient;
+import uz.pulsepay.domain.fee.FeeRule;
+import uz.pulsepay.domain.fee.FeeRuleTier;
+import uz.pulsepay.domain.fee.FeeType;
+import uz.pulsepay.domain.fee.FeeRuleEntity;
+import uz.pulsepay.domain.fee.FeeRuleTierEntity;
+import uz.pulsepay.service.FeeService;
+import uz.pulsepay.service.FeeService.AddTierCommand;
+import uz.pulsepay.service.FeeService.CreateFeeRuleCommand;
+import uz.pulsepay.repository.FeeRuleRepository;
+import uz.pulsepay.repository.FeeRuleTierRepository;
+import uz.pulsepay.domain.shared.AuditContext;
+import uz.pulsepay.domain.shared.ConflictException;
+import uz.pulsepay.domain.shared.DomainException;
+import uz.pulsepay.domain.shared.NotFoundException;
 
 import java.time.Instant;
 import java.util.List;
@@ -35,7 +38,7 @@ class ManageFeeRuleUseCaseTest {
 
     private FeeRuleRepository ruleRepo;
     private FeeRuleTierRepository tierRepo;
-    private ManageFeeRuleUseCase useCase;
+    private FeeService service;
 
     private static final UUID ADMIN_ID = UUID.randomUUID();
 
@@ -43,7 +46,7 @@ class ManageFeeRuleUseCaseTest {
     void setUp() {
         ruleRepo = mock(FeeRuleRepository.class);
         tierRepo = mock(FeeRuleTierRepository.class);
-        useCase  = new ManageFeeRuleUseCase(ruleRepo, tierRepo);
+        service  = new FeeService(ruleRepo, tierRepo);
 
         AuditContext.setAdminId(ADMIN_ID);
         when(ruleRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -62,7 +65,7 @@ class ManageFeeRuleUseCaseTest {
         when(ruleRepo.findActiveByScope(any(), any(), any(), any(), eq(100)))
                 .thenReturn(List.of());
 
-        FeeRule rule = useCase.createRule(fixedCommand("test-rule", 100));
+        FeeRule rule = service.createRule(fixedCommand("test-rule", 100));
 
         assertThat(rule.id()).isNotNull();
         assertThat(rule.name()).isEqualTo("test-rule");
@@ -76,9 +79,9 @@ class ManageFeeRuleUseCaseTest {
         UUID existingId = UUID.randomUUID();
         FeeRule existing = ruleWithPriority(existingId, 100, Instant.EPOCH, null);
         when(ruleRepo.findActiveByScope(any(), any(), any(), any(), eq(100)))
-                .thenReturn(List.of(existing));
+                .thenReturn(List.of(FeeRuleEntity.fromDomain(existing)));
 
-        assertThatThrownBy(() -> useCase.createRule(fixedCommand("duplicate", 100)))
+        assertThatThrownBy(() -> service.createRule(fixedCommand("duplicate", 100)))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Overlapping fee rule");
     }
@@ -87,7 +90,7 @@ class ManageFeeRuleUseCaseTest {
     void create_rule_throws_when_no_admin_in_context() {
         AuditContext.clear();
 
-        assertThatThrownBy(() -> useCase.createRule(fixedCommand("test", 50)))
+        assertThatThrownBy(() -> service.createRule(fixedCommand("test", 50)))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("Admin identity is required");
     }
@@ -98,9 +101,9 @@ class ManageFeeRuleUseCaseTest {
     void deactivate_sets_is_active_false_and_effective_to_now() {
         UUID ruleId = UUID.randomUUID();
         FeeRule active = ruleWithPriority(ruleId, 100, Instant.EPOCH, null);
-        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(active));
+        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(FeeRuleEntity.fromDomain(active)));
 
-        FeeRule result = useCase.deactivate(ruleId);
+        FeeRule result = service.deactivate(ruleId);
 
         assertThat(result.isActive()).isFalse();
         assertThat(result.effectiveTo()).isNotNull();
@@ -111,7 +114,7 @@ class ManageFeeRuleUseCaseTest {
     void deactivate_throws_not_found_for_unknown_id() {
         when(ruleRepo.findById(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> useCase.deactivate(UUID.randomUUID()))
+        assertThatThrownBy(() -> service.deactivate(UUID.randomUUID()))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -121,9 +124,9 @@ class ManageFeeRuleUseCaseTest {
     void supersede_deactivates_old_and_creates_new() {
         UUID oldId = UUID.randomUUID();
         FeeRule old = ruleWithPriority(oldId, 100, Instant.EPOCH, null);
-        when(ruleRepo.findById(oldId)).thenReturn(Optional.of(old));
+        when(ruleRepo.findById(oldId)).thenReturn(Optional.of(FeeRuleEntity.fromDomain(old)));
 
-        FeeRule result = useCase.supersede(oldId, fixedCommand("replacement", 100));
+        FeeRule result = service.supersede(oldId, fixedCommand("replacement", 100));
 
         assertThat(result.id()).isNotEqualTo(oldId);
         assertThat(result.name()).isEqualTo("replacement");
@@ -138,10 +141,10 @@ class ManageFeeRuleUseCaseTest {
     void add_tier_succeeds_when_no_transfer_references() {
         UUID ruleId = UUID.randomUUID();
         FeeRule tieredRule = tieredRule(ruleId);
-        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(tieredRule));
+        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(FeeRuleEntity.fromDomain(tieredRule)));
         when(ruleRepo.countTransferReferences(ruleId)).thenReturn(0L);
 
-        FeeRuleTier tier = useCase.addTier(ruleId, new AddTierCommand(0L, 999_999L, 500L, null));
+        FeeRuleTier tier = service.addTier(ruleId, new AddTierCommand(0L, 999_999L, 500L, null));
 
         assertThat(tier.feeRuleId()).isEqualTo(ruleId);
         assertThat(tier.fixedAmount()).isEqualTo(500L);
@@ -151,10 +154,10 @@ class ManageFeeRuleUseCaseTest {
     @Test
     void add_tier_fails_when_rule_has_live_references() {
         UUID ruleId = UUID.randomUUID();
-        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(tieredRule(ruleId)));
+        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(FeeRuleEntity.fromDomain(tieredRule(ruleId))));
         when(ruleRepo.countTransferReferences(ruleId)).thenReturn(5L);
 
-        assertThatThrownBy(() -> useCase.addTier(ruleId, new AddTierCommand(0L, null, null, 100)))
+        assertThatThrownBy(() -> service.addTier(ruleId, new AddTierCommand(0L, null, null, 100)))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("live transfer reference");
         verify(tierRepo, never()).save(any());
@@ -164,10 +167,10 @@ class ManageFeeRuleUseCaseTest {
     void add_tier_fails_for_non_tiered_rule() {
         UUID ruleId = UUID.randomUUID();
         FeeRule fixedRule = ruleWithPriority(ruleId, 100, Instant.EPOCH, null); // FIXED type
-        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(fixedRule));
+        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(FeeRuleEntity.fromDomain(fixedRule)));
         when(ruleRepo.countTransferReferences(ruleId)).thenReturn(0L);
 
-        assertThatThrownBy(() -> useCase.addTier(ruleId, new AddTierCommand(0L, null, 500L, null)))
+        assertThatThrownBy(() -> service.addTier(ruleId, new AddTierCommand(0L, null, 500L, null)))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("TIERED");
     }
@@ -178,10 +181,10 @@ class ManageFeeRuleUseCaseTest {
     void remove_tier_calls_deleteById_when_no_live_references() {
         UUID ruleId = UUID.randomUUID();
         UUID tierId = UUID.randomUUID();
-        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(tieredRule(ruleId)));
+        when(ruleRepo.findById(ruleId)).thenReturn(Optional.of(FeeRuleEntity.fromDomain(tieredRule(ruleId))));
         when(ruleRepo.countTransferReferences(ruleId)).thenReturn(0L);
 
-        useCase.removeTier(ruleId, tierId);
+        service.removeTier(ruleId, tierId);
 
         verify(tierRepo).deleteById(tierId);
     }

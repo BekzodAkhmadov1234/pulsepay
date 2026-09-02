@@ -2,10 +2,17 @@ package uz.pulsepay.identity.domain.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uz.pulsepay.identity.domain.model.*;
-import uz.pulsepay.identity.domain.port.out.OtpCodeRepository;
-import uz.pulsepay.identity.domain.port.out.SecurityCooldownRepository;
-import uz.pulsepay.shared.exception.DomainException;
+import uz.pulsepay.domain.identity.CooldownType;
+import uz.pulsepay.domain.identity.OtpCode;
+import uz.pulsepay.domain.identity.OtpCodeEntity;
+import uz.pulsepay.domain.identity.OtpProperties;
+import uz.pulsepay.domain.identity.OtpPurpose;
+import uz.pulsepay.domain.identity.SecurityCooldown;
+import uz.pulsepay.domain.identity.SecurityCooldownEntity;
+import uz.pulsepay.repository.OtpCodeRepository;
+import uz.pulsepay.repository.SecurityCooldownRepository;
+import uz.pulsepay.service.OtpService;
+import uz.pulsepay.utils.exception.DomainException;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -29,26 +36,26 @@ import static org.mockito.Mockito.*;
  */
 class OtpDomainServiceTest {
 
-    private static final UUID USER_ID  = UUID.randomUUID();
+    private static final UUID USER_ID   = UUID.randomUUID();
     private static final UUID TARGET_ID = UUID.randomUUID();
 
-    private OtpCodeRepository otpRepo;
-    private SecurityCooldownRepository cooldownRepo;
+    private OtpCodeRepository otpCodeRepository;
+    private SecurityCooldownRepository cooldownRepository;
     private OtpProperties props;
-    private OtpDomainService service;
+    private OtpService service;
 
     @BeforeEach
     void setUp() {
-        otpRepo     = mock(OtpCodeRepository.class);
-        cooldownRepo = mock(SecurityCooldownRepository.class);
+        otpCodeRepository   = mock(OtpCodeRepository.class);
+        cooldownRepository  = mock(SecurityCooldownRepository.class);
         // Default config per spec: 59s expiry, 3 attempts, 15-min lockout
-        props       = new OtpProperties(59, 3, 15);
-        service     = new OtpDomainService(props, otpRepo, cooldownRepo);
+        props   = new OtpProperties(59, 3, 15);
+        service = new OtpService(props, otpCodeRepository, cooldownRepository);
 
-        when(otpRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(cooldownRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(otpCodeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(cooldownRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         // Default: no active lockout
-        when(cooldownRepo.findActiveCooldown(any(), eq(CooldownType.OTP_LOCKOUT)))
+        when(cooldownRepository.findActiveCooldown(any(), any(), any()))
                 .thenReturn(Optional.empty());
     }
 
@@ -63,30 +70,31 @@ class OtpDomainServiceTest {
 
     @Test
     void generateAndSave_saves_hash_not_plaintext() {
-        AtomicReference<OtpCode> saved = new AtomicReference<>();
-        when(otpRepo.save(any())).thenAnswer(inv -> {
+        AtomicReference<OtpCodeEntity> saved = new AtomicReference<>();
+        when(otpCodeRepository.save(any())).thenAnswer(inv -> {
             saved.set(inv.getArgument(0));
             return inv.getArgument(0);
         });
 
         String plainCode = service.generateAndSave(USER_ID, OtpPurpose.LOGIN, null);
 
-        assertThat(saved.get().codeHash()).isNotEqualTo(plainCode);
-        assertThat(saved.get().codeHash()).hasSize(64); // SHA-256 hex
+        OtpCode savedDomain = saved.get().toDomain();
+        assertThat(savedDomain.codeHash()).isNotEqualTo(plainCode);
+        assertThat(savedDomain.codeHash()).hasSize(64); // SHA-256 hex
     }
 
     @Test
     void generateAndSave_expiry_uses_configured_validity_seconds() {
         Instant before = Instant.now();
-        AtomicReference<OtpCode> saved = new AtomicReference<>();
-        when(otpRepo.save(any())).thenAnswer(inv -> {
+        AtomicReference<OtpCodeEntity> saved = new AtomicReference<>();
+        when(otpCodeRepository.save(any())).thenAnswer(inv -> {
             saved.set(inv.getArgument(0));
             return inv.getArgument(0);
         });
 
         service.generateAndSave(USER_ID, OtpPurpose.LOGIN, null);
 
-        Instant expiry = saved.get().expiresAt();
+        Instant expiry = saved.get().toDomain().expiresAt();
         // Should be ~59 seconds from now (within ±2s tolerance)
         assertThat(expiry).isAfter(before.plusSeconds(57));
         assertThat(expiry).isBefore(before.plusSeconds(61));
@@ -95,14 +103,14 @@ class OtpDomainServiceTest {
     @Test
     void generateAndSave_blocked_when_lockout_active() {
         SecurityCooldown activeLock = lockout(Instant.now().plusSeconds(900));
-        when(cooldownRepo.findActiveCooldown(USER_ID, CooldownType.OTP_LOCKOUT))
-                .thenReturn(Optional.of(activeLock));
+        when(cooldownRepository.findActiveCooldown(eq(USER_ID), eq("otp_lockout"), any(Instant.class)))
+                .thenReturn(Optional.of(SecurityCooldownEntity.fromDomain(activeLock)));
 
         assertThatThrownBy(() -> service.generateAndSave(USER_ID, OtpPurpose.LOGIN, null))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("OTP locked");
 
-        verify(otpRepo, never()).save(any());
+        verify(otpCodeRepository, never()).save(any());
     }
 
     // ── REG-03: verification and lockout ──────────────────────────────────
@@ -111,59 +119,62 @@ class OtpDomainServiceTest {
     void verifyCode_succeeds_on_correct_code() {
         String rawCode = "123456";
         OtpCode otp = validOtp(rawCode, 0);
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
-                .thenReturn(Optional.of(otp));
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+                .thenReturn(Optional.of(OtpCodeEntity.fromDomain(otp)));
 
         OtpCode result = service.verifyCode(USER_ID, rawCode, OtpPurpose.LOGIN);
 
         assertThat(result.id()).isEqualTo(otp.id());
-        verify(otpRepo).markConsumed(otp.id());
+        verify(otpCodeRepository).markConsumed(eq(otp.id()), any(Instant.class));
     }
 
     @Test
     void verifyCode_increments_attempt_on_wrong_code() {
         String rawCode = "999999";
         OtpCode otp = validOtp("111111", 0);
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
-                .thenReturn(Optional.of(otp));
-        when(otpRepo.incrementAttemptCount(otp.id())).thenReturn(1);
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+                .thenReturn(Optional.of(OtpCodeEntity.fromDomain(otp)));
+        when(otpCodeRepository.findAttemptCount(otp.id())).thenReturn((short) 1);
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, rawCode, OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("Invalid OTP code");
 
-        verify(otpRepo).incrementAttemptCount(otp.id());
-        verify(cooldownRepo, never()).save(any());
+        verify(otpCodeRepository).incrementAttemptCount(otp.id());
+        verify(cooldownRepository, never()).save(any());
     }
 
     @Test
     void verifyCode_locks_user_after_max_attempts_reached() {
         String rawCode = "wrong";
         OtpCode otp = validOtp("correct", 2); // already at 2 attempts
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
-                .thenReturn(Optional.of(otp));
-        when(otpRepo.incrementAttemptCount(otp.id())).thenReturn(3); // now at max (3)
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+                .thenReturn(Optional.of(OtpCodeEntity.fromDomain(otp)));
+        when(otpCodeRepository.findAttemptCount(otp.id())).thenReturn((short) 3); // now at max (3)
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, rawCode, OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("locked");
 
         // MANDATORY: lockout must be persisted
-        verify(cooldownRepo).save(argThat(c ->
-                c.cooldownType() == CooldownType.OTP_LOCKOUT && c.userId().equals(USER_ID)));
+        verify(cooldownRepository).save(argThat(entity -> {
+            SecurityCooldown c = entity.toDomain();
+            return c.cooldownType() == CooldownType.OTP_LOCKOUT && c.userId().equals(USER_ID);
+        }));
     }
 
     @Test
     void verifyCode_lockout_duration_is_configured_minutes() {
         OtpCode otp = validOtp("correct", 2);
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
-                .thenReturn(Optional.of(otp));
-        when(otpRepo.incrementAttemptCount(otp.id())).thenReturn(3);
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+                .thenReturn(Optional.of(OtpCodeEntity.fromDomain(otp)));
+        when(otpCodeRepository.findAttemptCount(otp.id())).thenReturn((short) 3);
 
         Instant before = Instant.now();
         try { service.verifyCode(USER_ID, "wrong", OtpPurpose.LOGIN); } catch (DomainException ignored) {}
 
-        verify(cooldownRepo).save(argThat(c -> {
+        verify(cooldownRepository).save(argThat(entity -> {
+            SecurityCooldown c = entity.toDomain();
             long lockMinutes = java.time.Duration.between(before, c.lockedUntil()).toMinutes();
             return lockMinutes >= 14 && lockMinutes <= 16; // ~15 minutes
         }));
@@ -172,14 +183,14 @@ class OtpDomainServiceTest {
     @Test
     void verifyCode_blocked_when_lockout_active() {
         SecurityCooldown activeLock = lockout(Instant.now().plusSeconds(900));
-        when(cooldownRepo.findActiveCooldown(USER_ID, CooldownType.OTP_LOCKOUT))
-                .thenReturn(Optional.of(activeLock));
+        when(cooldownRepository.findActiveCooldown(eq(USER_ID), eq("otp_lockout"), any(Instant.class)))
+                .thenReturn(Optional.of(SecurityCooldownEntity.fromDomain(activeLock)));
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, "123456", OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("OTP locked");
 
-        verify(otpRepo, never()).findLatestByUserIdAndPurpose(any(), any());
+        verify(otpCodeRepository, never()).findLatestByUserIdAndPurpose(any(), any());
     }
 
     @Test
@@ -188,8 +199,8 @@ class OtpDomainServiceTest {
                 sha256("code"), null,
                 Instant.now().minusSeconds(10), // expired
                 null, (short) 0);
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
-                .thenReturn(Optional.of(expired));
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+                .thenReturn(Optional.of(OtpCodeEntity.fromDomain(expired)));
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, "code", OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
@@ -203,8 +214,8 @@ class OtpDomainServiceTest {
                 Instant.now().plusSeconds(59),
                 Instant.now().minusSeconds(5), // consumed
                 (short) 0);
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
-                .thenReturn(Optional.of(consumed));
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+                .thenReturn(Optional.of(OtpCodeEntity.fromDomain(consumed)));
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, "code", OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
@@ -213,7 +224,7 @@ class OtpDomainServiceTest {
 
     @Test
     void verifyCode_no_pending_otp_throws() {
-        when(otpRepo.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
+        when(otpCodeRepository.findLatestByUserIdAndPurpose(USER_ID, OtpPurpose.LOGIN))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, "123456", OtpPurpose.LOGIN))

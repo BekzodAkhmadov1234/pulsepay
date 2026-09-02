@@ -1528,6 +1528,84 @@ function onAmountInput(e: Event) {
           </svg>
         </button>
 
+        <!-- A2P top-up shortcut -->
+        <button
+          type="button"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            max-width: 640px;
+            margin-top: 10px;
+            text-align: left;
+            background: rgba(247, 244, 237, 0.045);
+            border: 1px solid rgba(247, 244, 237, 0.12);
+            border-radius: 16px;
+            padding: 16px 18px;
+            font-family: Manrope, sans-serif;
+            color: #f7f4ed;
+            cursor: pointer;
+            transition:
+              background 0.15s,
+              border-color 0.15s;
+          "
+          @click="router.push('/top-up')"
+        >
+          <span
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex: none;
+              width: 38px;
+              height: 38px;
+              border-radius: 12px;
+              background: rgba(100, 180, 255, 0.16);
+              color: #64b4ff;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+          </span>
+          <span style="flex: 1; min-width: 0">
+            <span style="display: block; font-size: 15.5px; font-weight: 600">Bankdan kartaga</span>
+            <span
+              style="
+                display: block;
+                font-size: 12.5px;
+                color: rgba(247, 244, 237, 0.5);
+                margin-top: 2px;
+              "
+              >Bank hisobidan pul o'tkazing</span
+            >
+          </span>
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="rgba(247,244,237,0.45)"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="flex: none"
+          >
+            <path d="m9 6 6 6-6 6"></path>
+          </svg>
+        </button>
+
         <!-- Contact groups (starred + recent) from transfer history -->
         <template v-if="contactGroups.length > 0">
           <div

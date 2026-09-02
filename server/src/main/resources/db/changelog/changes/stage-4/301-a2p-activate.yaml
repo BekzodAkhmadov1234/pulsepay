@@ -1,0 +1,111 @@
+databaseChangeLog:
+
+  # ── Expand source_network check to allow 'bank' for A2P routes ───────────────
+  - changeSet:
+      id: 301-expand-route-src-network-bank
+      author: pulsepay
+      comment: "Allow 'bank' as source_network for A2P pull routes"
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE transfer_routes
+                DROP CONSTRAINT IF EXISTS chk_routes_src_network;
+              ALTER TABLE transfer_routes
+                ADD CONSTRAINT chk_routes_src_network
+                  CHECK (source_network IN ('uzcard', 'humo', 'bank'));
+
+  # ── A2P transfer type (id=6, after 5 existing seed types) ───────────────────
+  - changeSet:
+      id: 301-insert-a2p-transfer-type
+      author: pulsepay
+      comment: "Add A2P (account-to-person / bank pull) transfer type"
+      changes:
+        - insert:
+            tableName: transfer_types
+            columns:
+              - column: { name: code,                          value: "a2p" }
+              - column: { name: name_uz,                       value: "Account-to-person (bank pull)" }
+              - column: { name: requires_kyc,                  valueBoolean: true }
+              - column: { name: requires_kyb,                  valueBoolean: false }
+              - column: { name: allowed_sender_party_types,    value: "{person}" }
+              - column: { name: allowed_recipient_party_types, value: "{person}" }
+              - column: { name: launch_stage,                  valueNumeric: 4 }
+              - column: { name: is_active,                     valueBoolean: true }
+
+  # ── A2P routes: bank → uzcard and bank → humo ────────────────────────────────
+  - changeSet:
+      id: 301-route-bank-to-uzcard-a2p
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000403" }
+              - column: { name: route_code,            value: "bank_to_uzcard_a2p" }
+              - column: { name: source_network,        value: "bank" }
+              - column: { name: destination_network,   value: "uzcard" }
+              - column: { name: transfer_type_id,      valueNumeric: 6 }
+              - column: { name: processor_name,        value: "stub_bank_pull" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 301-route-bank-to-humo-a2p
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000404" }
+              - column: { name: route_code,            value: "bank_to_humo_a2p" }
+              - column: { name: source_network,        value: "bank" }
+              - column: { name: destination_network,   value: "humo" }
+              - column: { name: transfer_type_id,      valueNumeric: 6 }
+              - column: { name: processor_name,        value: "stub_bank_pull" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  # ── A2P fee rule: 0.5% (min 2 000 UZS, max 20 000 UZS) ──────────────────────
+  - changeSet:
+      id: 301-fee-rule-a2p-catchall
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                  value: "00000000-0000-0000-0000-000000000502" }
+              - column: { name: name,                 value: "A2P bank pull 0.5% (min 2 000 UZS, max 20 000 UZS)" }
+              - column: { name: transfer_type_id,     valueNumeric: 4 }
+              - column: { name: fee_type,             value: "percentage" }
+              - column: { name: percentage_bps,       valueNumeric: 50 }
+              - column: { name: min_fee_amount,       valueNumeric: 200000 }
+              - column: { name: max_fee_amount,       valueNumeric: 2000000 }
+              - column: { name: min_amount,           valueNumeric: 0 }
+              - column: { name: currency_code,        value: "UZS" }
+              - column: { name: priority,             valueNumeric: 100 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: fee_payer,            value: "sender" }
+              - column: { name: fee_recipient,        value: "platform" }
+              - column: { name: effective_from,       valueComputed: "NOW()" }
+
+  # ── A2P limit rule: 50 000 000 UZS per transaction ───────────────────────────
+  - changeSet:
+      id: 301-limit-rule-a2p-per-tx
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: limit_rules
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000000602" }
+              - column: { name: name,              value: "A2P per-transaction limit (50 000 000 UZS)" }
+              - column: { name: scope,             value: "per_transaction" }
+              - column: { name: kyc_tier,          value: "all" }
+              - column: { name: transfer_type_id,  valueNumeric: 4 }
+              - column: { name: max_amount,        valueNumeric: 5000000000 }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: limit_category,    value: "our_platform_limit" }
+              - column: { name: actor_type,        value: "person" }
+              - column: { name: is_active,         valueBoolean: true }
+              - column: { name: effective_from,    valueComputed: "NOW()" }

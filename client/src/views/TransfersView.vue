@@ -112,8 +112,9 @@ function statusLabel(status: string) {
 }
 
 function transferTypeLabel(tx: TransferDto): string {
-  if (tx.transferTypeId === 2) return "Bank o'tkazma";
+  if (tx.transferTypeId === 2) return "Bank hisobiga o'tkazma";
   if (tx.transferTypeId === 3) return "Savdogar to'lovi";
+  if (tx.transferTypeId === 4) return 'Bankdan kartaga';
   return "P2P o'tkazma";
 }
 </script>

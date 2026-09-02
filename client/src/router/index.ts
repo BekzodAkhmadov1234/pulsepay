@@ -48,6 +48,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/top-up',
+      name: 'top-up',
+      component: () => import('../views/A2PTransferView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/transfers',
       name: 'transfers',
       component: () => import('../views/TransfersView.vue'),

@@ -38,7 +38,7 @@ public interface TransferRepository extends JpaRepository<TransferEntity, UUID> 
                    t.idempotency_key,
                    TO_CHAR(t.initiated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS initiated_at,
                    TO_CHAR(t.completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS completed_at,
-                   su.full_name  AS sender_name,
+                   COALESCE(su.full_name, sbad.account_holder_name) AS sender_name,
                    sc.masked_pan AS sender_masked_pan,
                    COALESCE(ru.full_name, rbad.account_holder_name) AS recipient_name,
                    rc.masked_pan AS recipient_masked_pan,
@@ -49,6 +49,7 @@ public interface TransferRepository extends JpaRepository<TransferEntity, UUID> 
             LEFT JOIN transfer_participants sp ON sp.transfer_id = t.id AND sp.role = 'sender'
             LEFT JOIN users su ON su.id = sp.party_id
             LEFT JOIN cards sc ON sc.id = sp.instrument_id
+            LEFT JOIN bank_account_details sbad ON sbad.instrument_id = sp.instrument_id
             LEFT JOIN transfer_participants rp ON rp.transfer_id = t.id AND rp.role = 'recipient'
             LEFT JOIN users ru ON ru.id = rp.party_id
             LEFT JOIN cards rc ON rc.id = rp.instrument_id
@@ -60,7 +61,7 @@ public interface TransferRepository extends JpaRepository<TransferEntity, UUID> 
                    t.idempotency_key,
                    TO_CHAR(t.initiated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
                    TO_CHAR(t.completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-                   su.full_name,
+                   COALESCE(su.full_name, sbad.account_holder_name),
                    sc.masked_pan,
                    COALESCE(ru.full_name, rbad.account_holder_name),
                    rc.masked_pan,
@@ -71,6 +72,7 @@ public interface TransferRepository extends JpaRepository<TransferEntity, UUID> 
             LEFT JOIN transfer_participants sp ON sp.transfer_id = t.id AND sp.role = 'sender'
             LEFT JOIN users su ON su.id = sp.party_id
             LEFT JOIN cards sc ON sc.id = sp.instrument_id
+            LEFT JOIN bank_account_details sbad ON sbad.instrument_id = sp.instrument_id
             LEFT JOIN transfer_participants rp ON rp.transfer_id = t.id AND rp.role = 'recipient'
             LEFT JOIN users ru ON ru.id = rp.party_id
             LEFT JOIN cards rc ON rc.id = rp.instrument_id

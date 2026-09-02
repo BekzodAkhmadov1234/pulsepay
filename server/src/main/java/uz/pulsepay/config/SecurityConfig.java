@@ -12,10 +12,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import uz.pulsepay.infrastructure.security.AdminJwtFilter;
-import uz.pulsepay.infrastructure.security.JwtAuthenticationFilter;
-import uz.pulsepay.infrastructure.security.JwtService;
-import uz.pulsepay.infrastructure.security.MerchantJwtFilter;
+import uz.pulsepay.utils.security.AdminJwtFilter;
+import uz.pulsepay.utils.security.JwtAuthenticationFilter;
+import uz.pulsepay.utils.security.JwtService;
+import uz.pulsepay.utils.security.MerchantJwtFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;

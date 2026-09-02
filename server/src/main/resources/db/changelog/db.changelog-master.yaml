@@ -46,6 +46,10 @@ databaseChangeLog:
       file: db/changelog/changes/stage-3/201-business-tables.yaml
   - include:
       file: db/changelog/changes/stage-3/202-settlement-network.yaml
+  - include:
+      file: db/changelog/changes/stage-3/203-p2a-bank-account-table.yaml
+  - include:
+      file: db/changelog/changes/stage-3/204-p2a-activate.yaml
 
   # Stage 2 fixups that depend on Stage 3 schema
   - include:

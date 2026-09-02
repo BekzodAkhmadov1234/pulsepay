@@ -110,6 +110,12 @@ function statusLabel(status: string) {
   if (status === 'processing') return 'Jarayonda';
   return status;
 }
+
+function transferTypeLabel(tx: TransferDto): string {
+  if (tx.transferTypeId === 2) return "Bank o'tkazma";
+  if (tx.transferTypeId === 3) return "Savdogar to'lovi";
+  return "P2P o'tkazma";
+}
 </script>
 
 <template>
@@ -321,7 +327,9 @@ function statusLabel(status: string) {
                 >
                   {{ (tx.direction === 'credit' ? tx.senderName : tx.recipientName) || '—' }}
                 </div>
-                <div style="font-size: 13px; color: rgba(247, 244, 237, 0.48)">P2P o'tkazma</div>
+                <div style="font-size: 13px; color: rgba(247, 244, 237, 0.48)">
+                  {{ transferTypeLabel(tx) }}
+                </div>
               </div>
               <div
                 style="

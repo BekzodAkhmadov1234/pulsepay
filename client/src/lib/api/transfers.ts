@@ -15,6 +15,7 @@ export interface TransferDto {
   recipientMaskedPan: string | null;
   processedAt: string | null;
   direction: 'debit' | 'credit' | null;
+  transferTypeId: number | null;
 }
 
 export interface InitiateTransferPayload {

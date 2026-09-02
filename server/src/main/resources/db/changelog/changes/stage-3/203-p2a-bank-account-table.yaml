@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 203-bank-account-details
+      author: pulsepay
+      comment: "Bank account details table for P2A (person-to-account) transfers"
+      changes:
+        - createTable:
+            tableName: bank_account_details
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: instrument_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: bank_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: iban
+                  type: VARCHAR(34)
+                  constraints:
+                    unique: true
+              - column:
+                  name: account_number
+                  type: VARCHAR(25)
+              - column:
+                  name: account_holder_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: bank_account_details
+            baseColumnNames: instrument_id
+            referencedTableName: instruments
+            referencedColumnNames: id
+            constraintName: fk_bank_account_details_instrument
+        - addForeignKeyConstraint:
+            baseTableName: bank_account_details
+            baseColumnNames: bank_id
+            referencedTableName: banks
+            referencedColumnNames: id
+            constraintName: fk_bank_account_details_bank

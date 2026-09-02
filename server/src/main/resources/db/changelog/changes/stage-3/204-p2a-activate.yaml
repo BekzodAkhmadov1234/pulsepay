@@ -1,0 +1,121 @@
+databaseChangeLog:
+
+  # ── Expand destination_network check to include 'bank' ───────────────────────
+  - changeSet:
+      id: 204-expand-route-dest-network-bank
+      author: pulsepay
+      comment: "Allow 'bank' as destination_network for P2A routes"
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE transfer_routes
+                DROP CONSTRAINT IF EXISTS chk_routes_dest_network;
+              ALTER TABLE transfer_routes
+                ADD CONSTRAINT chk_routes_dest_network
+                  CHECK (destination_network IN ('uzcard', 'humo', 'merchant', 'bank'));
+
+  # ── bank_clearing ledger account ─────────────────────────────────────────────
+  - changeSet:
+      id: 204-ledger-bank-clearing
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column: { name: id,               value: "10000000-0000-0000-0000-000000000006" }
+              - column: { name: account_type_id,   valueNumeric: 1 }
+              - column: { name: normal_balance,    value: "debit" }
+              - column: { name: code,              value: "bank_clearing" }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: status,            value: "open" }
+
+  # ── P2A transfer routes ───────────────────────────────────────────────────────
+  - changeSet:
+      id: 204-route-uzcard-to-bank-p2a
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000401" }
+              - column: { name: route_code,            value: "uzcard_to_bank_p2a" }
+              - column: { name: source_network,        value: "uzcard" }
+              - column: { name: destination_network,   value: "bank" }
+              - column: { name: transfer_type_id,      valueNumeric: 2 }
+              - column: { name: processor_name,        value: "stub_bank" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 204-route-humo-to-bank-p2a
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000402" }
+              - column: { name: route_code,            value: "humo_to_bank_p2a" }
+              - column: { name: source_network,        value: "humo" }
+              - column: { name: destination_network,   value: "bank" }
+              - column: { name: transfer_type_id,      valueNumeric: 2 }
+              - column: { name: processor_name,        value: "stub_bank" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  # ── P2A fee rule: 1% catch-all (floor 500 UZS, cap 50 000 UZS) ──────────────
+  - changeSet:
+      id: 204-fee-rule-p2a-catchall
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                  value: "00000000-0000-0000-0000-000000000501" }
+              - column: { name: name,                 value: "P2A bank transfer 1% (floor 500 UZS, cap 50 000 UZS)" }
+              - column: { name: transfer_type_id,     valueNumeric: 2 }
+              - column: { name: fee_type,             value: "percentage" }
+              - column: { name: percentage_bps,       valueNumeric: 100 }
+              - column: { name: min_fee_amount,       valueNumeric: 50000 }
+              - column: { name: max_fee_amount,       valueNumeric: 5000000 }
+              - column: { name: min_amount,           valueNumeric: 0 }
+              - column: { name: currency_code,        value: "UZS" }
+              - column: { name: priority,             valueNumeric: 100 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: fee_payer,            value: "sender" }
+              - column: { name: fee_recipient,        value: "platform" }
+              - column: { name: effective_from,       valueComputed: "NOW()" }
+
+  # ── P2A limit rule: 10 000 000 UZS per transaction ───────────────────────────
+  - changeSet:
+      id: 204-limit-rule-p2a-per-tx
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: limit_rules
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000000601" }
+              - column: { name: name,              value: "P2A per-transaction limit (10 000 000 UZS)" }
+              - column: { name: scope,             value: "per_transaction" }
+              - column: { name: kyc_tier,          value: "all" }
+              - column: { name: transfer_type_id,  valueNumeric: 2 }
+              - column: { name: max_amount,        valueNumeric: 1000000000 }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: limit_category,    value: "our_platform_limit" }
+              - column: { name: actor_type,        value: "person" }
+              - column: { name: is_active,         valueBoolean: true }
+              - column: { name: effective_from,    valueComputed: "NOW()" }
+
+  # ── Activate P2A transfer type ────────────────────────────────────────────────
+  - changeSet:
+      id: 204-activate-p2a-transfer-type
+      author: pulsepay
+      changes:
+        - update:
+            tableName: transfer_types
+            columns:
+              - column:
+                  name: is_active
+                  valueBoolean: true
+            where: id = 2

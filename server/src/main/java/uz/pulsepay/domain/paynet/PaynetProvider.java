@@ -10,5 +10,6 @@ public record PaynetProvider(
         String[] fieldNames,
         boolean isActive,
         UUID partyId,
-        UUID instrumentId
+        UUID instrumentId,
+        int sortOrder
 ) {}

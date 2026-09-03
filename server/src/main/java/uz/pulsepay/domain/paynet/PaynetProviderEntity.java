@@ -39,6 +39,9 @@ public class PaynetProviderEntity {
     @Column(name = "instrument_id", nullable = false)
     private UUID instrumentId;
 
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -46,7 +49,7 @@ public class PaynetProviderEntity {
 
     public PaynetProviderEntity(UUID id, String serviceCode, String serviceName, String category,
                                 String[] fieldNames, boolean isActive, UUID partyId, UUID instrumentId,
-                                Instant createdAt) {
+                                int sortOrder, Instant createdAt) {
         this.id           = id;
         this.serviceCode  = serviceCode;
         this.serviceName  = serviceName;
@@ -55,16 +58,17 @@ public class PaynetProviderEntity {
         this.isActive     = isActive;
         this.partyId      = partyId;
         this.instrumentId = instrumentId;
+        this.sortOrder    = sortOrder;
         this.createdAt    = createdAt;
     }
 
     public PaynetProvider toDomain() {
         return new PaynetProvider(id, serviceCode, serviceName, category,
-                fieldNames, isActive, partyId, instrumentId);
+                fieldNames, isActive, partyId, instrumentId, sortOrder);
     }
 
     public static PaynetProviderEntity fromDomain(PaynetProvider p) {
         return new PaynetProviderEntity(p.id(), p.serviceCode(), p.serviceName(), p.category(),
-                p.fieldNames(), p.isActive(), p.partyId(), p.instrumentId(), Instant.now());
+                p.fieldNames(), p.isActive(), p.partyId(), p.instrumentId(), p.sortOrder(), Instant.now());
     }
 }

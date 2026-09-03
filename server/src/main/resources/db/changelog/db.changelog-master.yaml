@@ -97,3 +97,7 @@ databaseChangeLog:
   # Stage 5 — P2S (person-to-savings / Paynet utility payments)
   - include:
       file: db/changelog/changes/stage-5/401-p2s-activate.yaml
+
+  # Stage 6 — Paynet categories, search, popular, mobile top-up
+  - include:
+      file: db/changelog/changes/stage-6/402-paynet-categories-search.yaml

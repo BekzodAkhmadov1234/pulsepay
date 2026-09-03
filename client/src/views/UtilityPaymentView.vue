@@ -80,6 +80,50 @@ const pendingTransferId = ref('');
 const otpCode = ref('');
 const otpError = ref('');
 
+// ── Step 1: Category & search state ──────────────────────────
+const searchQuery = ref('');
+const activeCategory = ref<string | null>(null);
+
+const CATEGORY_LABELS: Record<string, string> = {
+  gas: 'Gaz',
+  water: 'Suv',
+  electricity: 'Elektr',
+  mobile: 'Mobil',
+  internet: 'Internet',
+};
+
+function categoryLabel(cat: string): string {
+  return CATEGORY_LABELS[cat] ?? cat;
+}
+
+/** Distinct categories derived from the loaded provider list. */
+const categories = computed<string[]>(() => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const p of p2sStore.providers) {
+    if (!seen.has(p.category)) {
+      seen.add(p.category);
+      result.push(p.category);
+    }
+  }
+  return result;
+});
+
+/** Providers after applying category tab and search query filters (client-side). */
+const filteredProviders = computed(() => {
+  let list = p2sStore.providers;
+  if (activeCategory.value) {
+    list = list.filter((p) => p.category === activeCategory.value);
+  }
+  const q = searchQuery.value.toLowerCase().trim();
+  if (q) {
+    list = list.filter(
+      (p) => p.serviceName.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
+    );
+  }
+  return list;
+});
+
 onMounted(async () => {
   if (cardsStore.cards.length === 0) await cardsStore.fetchCards();
   if (verifiedCards.value.length > 0) senderCardId.value = verifiedCards.value[0].id;
@@ -95,10 +139,20 @@ function selectProvider(provider: PaynetProviderDto) {
   feeAmountUzs.value = null;
 }
 
+function goBack() {
+  if (selectedProvider.value) {
+    selectedProvider.value = null;
+  } else {
+    router.back();
+  }
+}
+
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
-  if (c.includes('gas') || c === 'gas') return 'flame';
-  if (c.includes('water') || c === 'water') return 'droplet';
+  if (c === 'gas') return 'flame';
+  if (c === 'water') return 'droplet';
+  if (c === 'mobile') return 'phone';
+  if (c === 'internet') return 'wifi';
   return 'zap';
 }
 
@@ -116,7 +170,7 @@ function validate(): boolean {
   return Object.keys(fieldErrors.value).length === 0;
 }
 
-// Uzbek labels for common Paynet field codes (matches PHP project's titleUz from Paynet API)
+// Uzbek labels for common Paynet field codes
 const FIELD_LABELS: Record<string, string> = {
   account: 'Shaxsiy hisob raqam',
   account_number: 'Hisob raqami',
@@ -151,7 +205,6 @@ async function handleContinue() {
   if (!validate()) return;
 
   try {
-    // Server-side field validation
     await validatePrepayment(selectedProvider.value!.serviceCode, serviceFields.value);
   } catch (err) {
     sendError.value = err instanceof ApiError ? err.message : 'Xizmat vaqtincha mavjud emas.';
@@ -236,7 +289,7 @@ async function handleConfirmOtp() {
           cursor: pointer;
           flex-shrink: 0;
         "
-        @click="selectedProvider ? (selectedProvider = null) : router.back()"
+        @click="goBack"
       >
         <svg
           width="18"
@@ -264,7 +317,7 @@ async function handleConfirmOtp() {
           {{ selectedProvider ? selectedProvider.serviceName : "Kommunal to'lovlar" }}
         </h1>
         <p style="font-size: 13px; color: rgba(247, 244, 237, 0.5); margin: 0">
-          {{ selectedProvider ? selectedProvider.category : 'Kommunal xizmatlar' }}
+          {{ selectedProvider ? categoryLabel(selectedProvider.category) : 'Xizmat tanlang' }}
         </p>
       </div>
     </div>
@@ -399,8 +452,109 @@ async function handleConfirmOtp() {
 
     <!-- Steps 1 & 2 -->
     <template v-else>
-      <!-- Step 1: Provider selection -->
+      <!-- ── Step 1: Provider selection ─────────────────────────────────────── -->
       <div v-if="!selectedProvider" style="width: 100%; max-width: 640px">
+        <!-- Search bar -->
+        <div style="position: relative; margin-bottom: 16px">
+          <svg
+            style="
+              position: absolute;
+              left: 14px;
+              top: 50%;
+              transform: translateY(-50%);
+              pointer-events: none;
+              color: rgba(247, 244, 237, 0.35);
+            "
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="Xizmat qidirish…"
+            style="
+              width: 100%;
+              height: 46px;
+              padding: 0 16px 0 40px;
+              background: rgba(14, 33, 28, 0.55);
+              border: 1px solid rgba(247, 244, 237, 0.14);
+              border-radius: 12px;
+              font-family: Manrope, sans-serif;
+              font-size: 14px;
+              color: #f7f4ed;
+              outline: none;
+              box-sizing: border-box;
+            "
+          />
+        </div>
+
+        <!-- Category tabs (hidden while searching) -->
+        <div
+          v-if="!searchQuery && categories.length > 1"
+          style="
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            margin-bottom: 20px;
+            scrollbar-width: none;
+          "
+        >
+          <!-- "Barchasi" chip -->
+          <button
+            type="button"
+            :style="{
+              padding: '7px 16px',
+              borderRadius: '999px',
+              border: '1px solid',
+              borderColor: activeCategory === null ? '#29BE8C' : 'rgba(247,244,237,0.14)',
+              background: activeCategory === null ? 'rgba(41,190,140,0.14)' : 'transparent',
+              color: activeCategory === null ? '#29BE8C' : 'rgba(247,244,237,0.7)',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+              fontFamily: 'Manrope, sans-serif',
+            }"
+            @click="activeCategory = null"
+          >
+            Barchasi
+          </button>
+          <button
+            v-for="cat in categories"
+            :key="cat"
+            type="button"
+            :style="{
+              padding: '7px 16px',
+              borderRadius: '999px',
+              border: '1px solid',
+              borderColor: activeCategory === cat ? '#29BE8C' : 'rgba(247,244,237,0.14)',
+              background: activeCategory === cat ? 'rgba(41,190,140,0.14)' : 'transparent',
+              color: activeCategory === cat ? '#29BE8C' : 'rgba(247,244,237,0.7)',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+              fontFamily: 'Manrope, sans-serif',
+            }"
+            @click="activeCategory = activeCategory === cat ? null : cat"
+          >
+            {{ categoryLabel(cat) }}
+          </button>
+        </div>
+
+        <!-- Loading state -->
         <div
           v-if="p2sStore.isLoading"
           style="
@@ -412,6 +566,21 @@ async function handleConfirmOtp() {
         >
           Yuklanmoqda...
         </div>
+
+        <!-- Empty search result -->
+        <div
+          v-else-if="filteredProviders.length === 0"
+          style="
+            text-align: center;
+            color: rgba(247, 244, 237, 0.4);
+            padding: 40px 0;
+            font-size: 14px;
+          "
+        >
+          Hech narsa topilmadi
+        </div>
+
+        <!-- Provider grid -->
         <div
           v-else
           style="
@@ -421,7 +590,7 @@ async function handleConfirmOtp() {
           "
         >
           <button
-            v-for="provider in p2sStore.providers"
+            v-for="provider in filteredProviders"
             :key="provider.id"
             type="button"
             style="
@@ -461,7 +630,7 @@ async function handleConfirmOtp() {
                 justify-content: center;
               "
             >
-              <!-- Gas icon -->
+              <!-- Gas -->
               <svg
                 v-if="categoryIcon(provider.category) === 'flame'"
                 width="22"
@@ -477,7 +646,7 @@ async function handleConfirmOtp() {
                   d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
                 ></path>
               </svg>
-              <!-- Water icon -->
+              <!-- Water -->
               <svg
                 v-else-if="categoryIcon(provider.category) === 'droplet'"
                 width="22"
@@ -493,7 +662,39 @@ async function handleConfirmOtp() {
                   d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"
                 ></path>
               </svg>
-              <!-- Electricity / zap icon -->
+              <!-- Mobile / phone -->
+              <svg
+                v-else-if="categoryIcon(provider.category) === 'phone'"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#29BE8C"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <!-- Internet / wifi -->
+              <svg
+                v-else-if="categoryIcon(provider.category) === 'wifi'"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#29BE8C"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+              <!-- Electricity / zap -->
               <svg
                 v-else
                 width="22"
@@ -513,14 +714,14 @@ async function handleConfirmOtp() {
                 {{ provider.serviceName }}
               </div>
               <div style="font-size: 12px; color: rgba(247, 244, 237, 0.45)">
-                {{ provider.category }}
+                {{ categoryLabel(provider.category) }}
               </div>
             </div>
           </button>
         </div>
       </div>
 
-      <!-- Step 2: Fields + card + amount -->
+      <!-- ── Step 2: Fields + card + amount ─────────────────────────────────── -->
       <div
         v-else
         style="width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 18px"
@@ -540,7 +741,7 @@ async function handleConfirmOtp() {
           </label>
           <input
             v-model="serviceFields[fieldName]"
-            type="text"
+            :type="fieldName === 'phone' ? 'tel' : 'text'"
             :placeholder="fieldLabel(fieldName)"
             style="
               width: 100%;

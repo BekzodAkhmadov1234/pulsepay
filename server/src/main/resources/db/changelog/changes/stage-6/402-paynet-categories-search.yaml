@@ -1,0 +1,125 @@
+databaseChangeLog:
+
+  # ── Add sort_order column to paynet_providers ─────────────────────────────────
+  - changeSet:
+      id: 402-paynet-sort-order
+      author: pulsepay
+      changes:
+        - addColumn:
+            tableName: paynet_providers
+            columns:
+              - column:
+                  name: sort_order
+                  type: INT
+                  defaultValueNumeric: 100
+                  constraints:
+                    nullable: false
+
+  # ── Back-fill sort_order for existing 3 providers ─────────────────────────────
+  - changeSet:
+      id: 402-paynet-sort-order-backfill
+      author: pulsepay
+      changes:
+        - sql:
+            sql: >-
+              UPDATE paynet_providers SET sort_order = 10 WHERE service_code = 'gas-uzb';
+              UPDATE paynet_providers SET sort_order = 20 WHERE service_code = 'water-uzb';
+              UPDATE paynet_providers SET sort_order = 30 WHERE service_code = 'electricity-uzb';
+
+  # ── Index for sorted provider listing ─────────────────────────────────────────
+  - changeSet:
+      id: 402-paynet-sort-index
+      author: pulsepay
+      changes:
+        - sql:
+            sql: >-
+              CREATE INDEX idx_paynet_providers_sort ON paynet_providers(sort_order)
+              WHERE is_active = TRUE;
+
+  # ── Virtual party: UzMobile ───────────────────────────────────────────────────
+  - changeSet:
+      id: 402-party-paynet-mobile
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: parties
+            columns:
+              - column: { name: id,         value: "ee000000-0000-0000-0000-000000000004" }
+              - column: { name: party_type,  value: "merchant" }
+              - column: { name: created_at,  valueComputed: "NOW()" }
+
+  # ── Virtual party: Internet ───────────────────────────────────────────────────
+  - changeSet:
+      id: 402-party-paynet-internet
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: parties
+            columns:
+              - column: { name: id,         value: "ee000000-0000-0000-0000-000000000005" }
+              - column: { name: party_type,  value: "merchant" }
+              - column: { name: created_at,  valueComputed: "NOW()" }
+
+  # ── Virtual instrument: UzMobile ──────────────────────────────────────────────
+  - changeSet:
+      id: 402-instrument-paynet-mobile
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: instruments
+            columns:
+              - column: { name: id,              value: "ff000000-0000-0000-0000-000000000004" }
+              - column: { name: owner_party_id,  value: "ee000000-0000-0000-0000-000000000004" }
+              - column: { name: instrument_type, value: "merchant_account" }
+              - column: { name: status,          value: "active" }
+              - column: { name: created_at,      valueComputed: "NOW()" }
+
+  # ── Virtual instrument: Internet ──────────────────────────────────────────────
+  - changeSet:
+      id: 402-instrument-paynet-internet
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: instruments
+            columns:
+              - column: { name: id,              value: "ff000000-0000-0000-0000-000000000005" }
+              - column: { name: owner_party_id,  value: "ee000000-0000-0000-0000-000000000005" }
+              - column: { name: instrument_type, value: "merchant_account" }
+              - column: { name: status,          value: "active" }
+              - column: { name: created_at,      valueComputed: "NOW()" }
+
+  # ── Seed: UzMobile top-up provider ───────────────────────────────────────────
+  - changeSet:
+      id: 402-seed-paynet-mobile
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: paynet_providers
+            columns:
+              - column: { name: id,            value: "cc000000-0000-0000-0000-000000000004" }
+              - column: { name: service_code,  value: "mobile-uzb" }
+              - column: { name: service_name,  value: "UzMobile to'ldirish" }
+              - column: { name: category,      value: "mobile" }
+              - column: { name: field_names,   value: "phone" }
+              - column: { name: is_active,     valueBoolean: true }
+              - column: { name: sort_order,    valueNumeric: 40 }
+              - column: { name: party_id,      value: "ee000000-0000-0000-0000-000000000004" }
+              - column: { name: instrument_id, value: "ff000000-0000-0000-0000-000000000004" }
+
+  # ── Seed: Internet (Sarkor Telecom) provider ──────────────────────────────────
+  - changeSet:
+      id: 402-seed-paynet-internet
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: paynet_providers
+            columns:
+              - column: { name: id,            value: "cc000000-0000-0000-0000-000000000005" }
+              - column: { name: service_code,  value: "internet-uzb" }
+              - column: { name: service_name,  value: "Internet (Sarkor Telecom)" }
+              - column: { name: category,      value: "internet" }
+              - column: { name: field_names,   value: "account_number" }
+              - column: { name: is_active,     valueBoolean: true }
+              - column: { name: sort_order,    valueNumeric: 50 }
+              - column: { name: party_id,      value: "ee000000-0000-0000-0000-000000000005" }
+              - column: { name: instrument_id, value: "ff000000-0000-0000-0000-000000000005" }

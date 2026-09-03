@@ -9,6 +9,12 @@ export interface PaynetProviderDto {
   fieldNames: string[];
 }
 
+export interface PaynetCategoryDto {
+  category: string;
+  displayName: string;
+  providerCount: number;
+}
+
 export interface InitiateP2SPayload {
   senderInstrumentId: string;
   senderCardNetwork: string;
@@ -20,8 +26,21 @@ export interface InitiateP2SPayload {
   idempotencyKey: string;
 }
 
-export function listPaynetProviders(): Promise<PaynetProviderDto[]> {
-  return apiClient.get<PaynetProviderDto[]>('/paynet/providers');
+export function listPaynetProviders(category?: string): Promise<PaynetProviderDto[]> {
+  const params = category ? `?category=${encodeURIComponent(category)}` : '';
+  return apiClient.get<PaynetProviderDto[]>(`/paynet/providers${params}`);
+}
+
+export function listPaynetCategories(): Promise<PaynetCategoryDto[]> {
+  return apiClient.get<PaynetCategoryDto[]>('/paynet/categories');
+}
+
+export function searchPaynetProviders(q: string): Promise<PaynetProviderDto[]> {
+  return apiClient.get<PaynetProviderDto[]>(`/paynet/providers/search?q=${encodeURIComponent(q)}`);
+}
+
+export function popularPaynetProviders(count = 5): Promise<PaynetProviderDto[]> {
+  return apiClient.get<PaynetProviderDto[]>(`/paynet/providers/popular?count=${count}`);
 }
 
 export function validatePrepayment(
@@ -29,6 +48,10 @@ export function validatePrepayment(
   serviceFields: Record<string, string>
 ): Promise<PaynetProviderDto> {
   return apiClient.post<PaynetProviderDto>('/paynet/prepayment', { serviceCode, serviceFields });
+}
+
+export function mobileTopUp(phone: string, serviceCode?: string): Promise<PaynetProviderDto> {
+  return apiClient.post<PaynetProviderDto>('/paynet/mobile', { phone, serviceCode });
 }
 
 export function initiateP2STransfer(payload: InitiateP2SPayload): Promise<TransferDto> {

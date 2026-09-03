@@ -1,0 +1,284 @@
+databaseChangeLog:
+
+  # ── Expand destination_network check to include 'paynet' ─────────────────────
+  - changeSet:
+      id: 401-expand-route-dest-network-paynet
+      author: pulsepay
+      comment: "Allow 'paynet' as destination_network for P2S routes"
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE transfer_routes
+                DROP CONSTRAINT IF EXISTS chk_routes_dest_network;
+              ALTER TABLE transfer_routes
+                ADD CONSTRAINT chk_routes_dest_network
+                  CHECK (destination_network IN ('uzcard', 'humo', 'merchant', 'bank', 'paynet'));
+
+  # ── paynet_clearing ledger account ───────────────────────────────────────────
+  - changeSet:
+      id: 401-ledger-paynet-clearing
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: ledger_accounts
+            columns:
+              - column: { name: id,               value: "10000000-0000-0000-0000-000000000007" }
+              - column: { name: account_type_id,   valueNumeric: 1 }
+              - column: { name: normal_balance,    value: "debit" }
+              - column: { name: code,              value: "paynet_clearing" }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: status,            value: "open" }
+
+  # ── P2S transfer type (id=7, auto-increment) ─────────────────────────────────
+  - changeSet:
+      id: 401-insert-p2s-transfer-type
+      author: pulsepay
+      comment: "Add P2S (person-to-savings / Paynet utility) transfer type"
+      changes:
+        - insert:
+            tableName: transfer_types
+            columns:
+              - column: { name: code,                          value: "p2s" }
+              - column: { name: name_uz,                       value: "Person-to-savings (Paynet)" }
+              - column: { name: requires_kyc,                  valueBoolean: true }
+              - column: { name: requires_kyb,                  valueBoolean: false }
+              - column: { name: allowed_sender_party_types,    value: "{person}" }
+              - column: { name: allowed_recipient_party_types, value: "{merchant}" }
+              - column: { name: launch_stage,                  valueNumeric: 5 }
+              - column: { name: is_active,                     valueBoolean: true }
+
+  # ── Virtual parties for Paynet providers ─────────────────────────────────────
+  - changeSet:
+      id: 401-party-paynet-gas
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: parties
+            columns:
+              - column: { name: id,           value: "ee000000-0000-0000-0000-000000000001" }
+              - column: { name: party_type,   value: "merchant" }
+              - column: { name: created_at,   valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 401-party-paynet-water
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: parties
+            columns:
+              - column: { name: id,           value: "ee000000-0000-0000-0000-000000000002" }
+              - column: { name: party_type,   value: "merchant" }
+              - column: { name: created_at,   valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 401-party-paynet-electricity
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: parties
+            columns:
+              - column: { name: id,           value: "ee000000-0000-0000-0000-000000000003" }
+              - column: { name: party_type,   value: "merchant" }
+              - column: { name: created_at,   valueComputed: "NOW()" }
+
+  # ── Virtual instruments for Paynet providers ──────────────────────────────────
+  - changeSet:
+      id: 401-instrument-paynet-gas
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: instruments
+            columns:
+              - column: { name: id,               value: "ff000000-0000-0000-0000-000000000001" }
+              - column: { name: owner_party_id,   value: "ee000000-0000-0000-0000-000000000001" }
+              - column: { name: instrument_type,  value: "merchant_account" }
+              - column: { name: status,           value: "active" }
+              - column: { name: created_at,       valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 401-instrument-paynet-water
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: instruments
+            columns:
+              - column: { name: id,               value: "ff000000-0000-0000-0000-000000000002" }
+              - column: { name: owner_party_id,   value: "ee000000-0000-0000-0000-000000000002" }
+              - column: { name: instrument_type,  value: "merchant_account" }
+              - column: { name: status,           value: "active" }
+              - column: { name: created_at,       valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 401-instrument-paynet-electricity
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: instruments
+            columns:
+              - column: { name: id,               value: "ff000000-0000-0000-0000-000000000003" }
+              - column: { name: owner_party_id,   value: "ee000000-0000-0000-0000-000000000003" }
+              - column: { name: instrument_type,  value: "merchant_account" }
+              - column: { name: status,           value: "active" }
+              - column: { name: created_at,       valueComputed: "NOW()" }
+
+  # ── paynet_providers table ────────────────────────────────────────────────────
+  - changeSet:
+      id: 401-create-paynet-providers
+      author: pulsepay
+      changes:
+        - sql:
+            sql: >-
+              CREATE TABLE paynet_providers (
+                id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                service_code    VARCHAR(50)  UNIQUE NOT NULL,
+                service_name    VARCHAR(200) NOT NULL,
+                category        VARCHAR(50)  NOT NULL,
+                field_names     VARCHAR(500) NOT NULL,
+                is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
+                party_id        UUID         NOT NULL REFERENCES parties(id),
+                instrument_id   UUID         NOT NULL REFERENCES instruments(id),
+                created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+              );
+
+  # ── Seed 3 Paynet providers ───────────────────────────────────────────────────
+  - changeSet:
+      id: 401-seed-paynet-gas
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: paynet_providers
+            columns:
+              - column: { name: id,             value: "cc000000-0000-0000-0000-000000000001" }
+              - column: { name: service_code,   value: "gas-uzb" }
+              - column: { name: service_name,   value: "Natural Gas (Uzbekneftegaz)" }
+              - column: { name: category,       value: "gas" }
+              - column: { name: field_names,    value: "account_number" }
+              - column: { name: is_active,      valueBoolean: true }
+              - column: { name: party_id,       value: "ee000000-0000-0000-0000-000000000001" }
+              - column: { name: instrument_id,  value: "ff000000-0000-0000-0000-000000000001" }
+
+  - changeSet:
+      id: 401-seed-paynet-water
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: paynet_providers
+            columns:
+              - column: { name: id,             value: "cc000000-0000-0000-0000-000000000002" }
+              - column: { name: service_code,   value: "water-uzb" }
+              - column: { name: service_name,   value: "Tap Water (Suvtaminot)" }
+              - column: { name: category,       value: "water" }
+              - column: { name: field_names,    value: "account_number" }
+              - column: { name: is_active,      valueBoolean: true }
+              - column: { name: party_id,       value: "ee000000-0000-0000-0000-000000000002" }
+              - column: { name: instrument_id,  value: "ff000000-0000-0000-0000-000000000002" }
+
+  - changeSet:
+      id: 401-seed-paynet-electricity
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: paynet_providers
+            columns:
+              - column: { name: id,             value: "cc000000-0000-0000-0000-000000000003" }
+              - column: { name: service_code,   value: "electricity-uzb" }
+              - column: { name: service_name,   value: "Electricity (Energo)" }
+              - column: { name: category,       value: "electricity" }
+              - column: { name: field_names,    value: "account_number" }
+              - column: { name: is_active,      valueBoolean: true }
+              - column: { name: party_id,       value: "ee000000-0000-0000-0000-000000000003" }
+              - column: { name: instrument_id,  value: "ff000000-0000-0000-0000-000000000003" }
+
+  # ── P2S routes: uzcard → paynet and humo → paynet ─────────────────────────────
+  - changeSet:
+      id: 401-route-uzcard-to-paynet-p2s
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000405" }
+              - column: { name: route_code,            value: "uzcard_to_paynet_p2s" }
+              - column: { name: source_network,        value: "uzcard" }
+              - column: { name: destination_network,   value: "paynet" }
+              - column: { name: transfer_type_id,      valueNumeric: 7 }
+              - column: { name: processor_name,        value: "stub_paynet" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  - changeSet:
+      id: 401-route-humo-to-paynet-p2s
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: transfer_routes
+            columns:
+              - column: { name: id,                   value: "00000000-0000-0000-0000-000000000406" }
+              - column: { name: route_code,            value: "humo_to_paynet_p2s" }
+              - column: { name: source_network,        value: "humo" }
+              - column: { name: destination_network,   value: "paynet" }
+              - column: { name: transfer_type_id,      valueNumeric: 7 }
+              - column: { name: processor_name,        value: "stub_paynet" }
+              - column: { name: priority,              valueNumeric: 10 }
+              - column: { name: is_active,             valueBoolean: true }
+              - column: { name: effective_from,        valueComputed: "NOW()" }
+
+  # ── P2S fee rule: 1% (min 2 000 UZS, max 30 000 UZS) ─────────────────────────
+  - changeSet:
+      id: 401-fee-rule-p2s-catchall
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                  value: "00000000-0000-0000-0000-000000000503" }
+              - column: { name: name,                 value: "P2S utility payment 1% (min 2 000 UZS, max 30 000 UZS)" }
+              - column: { name: transfer_type_id,     valueNumeric: 7 }
+              - column: { name: fee_type,             value: "percentage" }
+              - column: { name: percentage_bps,       valueNumeric: 100 }
+              - column: { name: min_fee_amount,       valueNumeric: 200000 }
+              - column: { name: max_fee_amount,       valueNumeric: 3000000 }
+              - column: { name: min_amount,           valueNumeric: 0 }
+              - column: { name: currency_code,        value: "UZS" }
+              - column: { name: priority,             valueNumeric: 100 }
+              - column: { name: is_active,            valueBoolean: true }
+              - column: { name: fee_payer,            value: "sender" }
+              - column: { name: fee_recipient,        value: "platform" }
+              - column: { name: effective_from,       valueComputed: "NOW()" }
+
+  # ── P2S limit rule: 500 000 000 UZS per transaction (50M UZS) ────────────────
+  - changeSet:
+      id: 401-limit-rule-p2s-per-tx
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: limit_rules
+            columns:
+              - column: { name: id,               value: "00000000-0000-0000-0000-000000000603" }
+              - column: { name: name,              value: "P2S per-transaction limit (50 000 000 UZS)" }
+              - column: { name: scope,             value: "per_transaction" }
+              - column: { name: kyc_tier,          value: "all" }
+              - column: { name: transfer_type_id,  valueNumeric: 7 }
+              - column: { name: max_amount,        valueNumeric: 5000000000 }
+              - column: { name: currency_code,     value: "UZS" }
+              - column: { name: limit_category,    value: "our_platform_limit" }
+              - column: { name: actor_type,        value: "person" }
+              - column: { name: is_active,         valueBoolean: true }
+              - column: { name: effective_from,    valueComputed: "NOW()" }
+
+  # ── p2s_transfer_details table ────────────────────────────────────────────────
+  - changeSet:
+      id: 401-create-p2s-transfer-details
+      author: pulsepay
+      changes:
+        - sql:
+            sql: >-
+              CREATE TABLE p2s_transfer_details (
+                id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                transfer_id     UUID NOT NULL REFERENCES transfers(id),
+                service_code    VARCHAR(50) NOT NULL,
+                service_fields  TEXT NOT NULL,
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+              );
+              CREATE INDEX idx_p2s_details_transfer_id ON p2s_transfer_details(transfer_id);

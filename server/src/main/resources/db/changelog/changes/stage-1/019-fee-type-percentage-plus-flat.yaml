@@ -1,0 +1,16 @@
+databaseChangeLog:
+
+  # ── Extend fee_type check constraint to allow 'percentage_plus_flat' ─────────
+  # PHP OperationParam.calculateFeeAmount() uses: round(amount * percent_com / 100 + flat_com)
+  # This maps to a combined percentage + flat fee type unavailable in the original
+  # three-value constraint. Drop the old constraint and recreate with the new value.
+  - changeSet:
+      id: 019-fee-type-add-percentage-plus-flat
+      author: pulsepay
+      changes:
+        - sql:
+            sql: ALTER TABLE fee_rules DROP CONSTRAINT IF EXISTS chk_fee_rules_type;
+        - sql:
+            sql: >
+              ALTER TABLE fee_rules ADD CONSTRAINT chk_fee_rules_type
+              CHECK (fee_type IN ('fixed','percentage','tiered','percentage_plus_flat'));

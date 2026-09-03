@@ -211,6 +211,58 @@ class FeeCalculationServiceTest {
                 .hasMessageContaining("No tier matches amount");
     }
 
+    // ─── PERCENTAGE_PLUS_FLAT fee ────────────────────────────────────────────
+    //   fee = round(amount × percent_com / 100 + flat_com)
+    @Test
+    void percentage_plus_flat_basic() {
+        // 1_000_000 tiyin × 150 bps → 15_000 + flat=2_000 → 17_000
+        FeeRule rule = senderRule(UUID.randomUUID(), FeeType.PERCENTAGE_PLUS_FLAT, 2_000L, 150, null, null, 100, null, null, P2P);
+
+        Optional<FeeService.FeeResult> result = calculate(rule, 1_000_000L, "uzcard", "humo");
+
+        assertThat(result.get().fee().amount()).isEqualTo(17_000L);
+    }
+
+    @Test
+    void percentage_plus_flat_zero_flat() {
+        // 1_000_000 tiyin × 100 bps → 10_000 + flat=0 → 10_000
+        FeeRule rule = senderRule(UUID.randomUUID(), FeeType.PERCENTAGE_PLUS_FLAT, 0L, 100, null, null, 100, null, null, P2P);
+
+        Optional<FeeService.FeeResult> result = calculate(rule, 1_000_000L, "uzcard", "humo");
+
+        assertThat(result.get().fee().amount()).isEqualTo(10_000L);
+    }
+
+    @Test
+    void percentage_plus_flat_matches_php_formula() {
+        // fee = (5_000_000 × 150 + 5_000) / 10_000 + 20_000 = 75_000 + 20_000 = 95_000
+        FeeRule rule = senderRule(UUID.randomUUID(), FeeType.PERCENTAGE_PLUS_FLAT, 20_000L, 150, null, null, 100, null, null, P2P);
+
+        Optional<FeeService.FeeResult> result = calculate(rule, 5_000_000L, "uzcard", "humo");
+
+        assertThat(result.get().fee().amount()).isEqualTo(95_000L);
+    }
+
+    @Test
+    void percentage_plus_flat_cap_applied() {
+        // 5_000_000 × 150 bps → 75_000 + flat=2_000 → 77_000 > cap=50_000 → 50_000
+        FeeRule rule = senderRule(UUID.randomUUID(), FeeType.PERCENTAGE_PLUS_FLAT, 2_000L, 150, null, 50_000L, 100, null, null, P2P);
+
+        Optional<FeeService.FeeResult> result = calculate(rule, 5_000_000L, "uzcard", "humo");
+
+        assertThat(result.get().fee().amount()).isEqualTo(50_000L);
+    }
+
+    @Test
+    void percentage_plus_flat_floor_applied() {
+        // 10_000 × 100 bps → 100 + flat=500 → 600 < floor=1_000 → 1_000
+        FeeRule rule = senderRule(UUID.randomUUID(), FeeType.PERCENTAGE_PLUS_FLAT, 500L, 100, 1_000L, null, 100, null, null, P2P);
+
+        Optional<FeeService.FeeResult> result = calculate(rule, 10_000L, "uzcard", "humo");
+
+        assertThat(result.get().fee().amount()).isEqualTo(1_000L);
+    }
+
     // ─── Rule selection / tie-breaking ──────────────────────────────────────
 
     @Test

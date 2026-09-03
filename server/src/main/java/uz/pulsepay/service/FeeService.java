@@ -109,11 +109,27 @@ public class FeeService {
             case FIXED -> rule.fixedAmount() != null ? rule.fixedAmount() : 0L;
             case PERCENTAGE -> computePercentage(rule, amount);
             case TIERED -> computeTiered(rule, amount);
+            case PERCENTAGE_PLUS_FLAT -> computePercentagePlusFlat(rule, amount);
         };
     }
 
     private long computePercentage(FeeRule rule, long amount) {
         long raw = (amount * rule.percentageBps() + 5_000L) / 10_000L;
+        long floored = rule.minFeeAmount() != null ? Math.max(raw, rule.minFeeAmount()) : raw;
+        return rule.maxFeeAmount() != null ? Math.min(floored, rule.maxFeeAmount()) : floored;
+    }
+
+    /**
+     * Ports PHP OperationParam.calculateFeeAmount():
+     *   fee = round(amount × percent_com / 100) + flat_com
+     * Java equivalent (percent_com × 100 = percentageBps):
+     *   fee = (amount × bps + 5_000) / 10_000 + fixedAmount
+     * Min/max caps are applied to the combined total, matching PHP semantics.
+     */
+    private long computePercentagePlusFlat(FeeRule rule, long amount) {
+        long pct  = (amount * rule.percentageBps() + 5_000L) / 10_000L;
+        long flat = rule.fixedAmount() != null ? rule.fixedAmount() : 0L;
+        long raw  = pct + flat;
         long floored = rule.minFeeAmount() != null ? Math.max(raw, rule.minFeeAmount()) : raw;
         return rule.maxFeeAmount() != null ? Math.min(floored, rule.maxFeeAmount()) : floored;
     }

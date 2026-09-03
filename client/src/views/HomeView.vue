@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useCardsStore } from '@/stores/cards';
 import { useTransfersStore } from '@/stores/transfers';
 import type { TransferDto } from '@/lib/api/transfers';
+
+const router = useRouter();
 
 const cardsStore = useCardsStore();
 const transfersStore = useTransfersStore();
@@ -270,6 +273,87 @@ function formatAmount(uzs: number) {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ── Quick actions ── -->
+      <div style="margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px">
+        <button
+          class="pp-btn-ghost"
+          style="font-size: 13.5px; padding: 11px 18px"
+          @click="router.push('/send')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M8 21V5m0 16-3.5-3.5M8 5l3.5 3.5M16 3v16m0 0 3.5-3.5M16 19l-3.5-3.5"></path>
+          </svg>
+          O'tkazma
+        </button>
+        <button
+          class="pp-btn-ghost"
+          style="font-size: 13.5px; padding: 11px 18px"
+          @click="router.push('/send/bank')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <path d="M3 11h18"></path>
+          </svg>
+          Bankka o'tkazma
+        </button>
+        <button
+          class="pp-btn-ghost"
+          style="font-size: 13.5px; padding: 11px 18px"
+          @click="router.push('/top-up')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 5v14M5 12l7-7 7 7"></path>
+          </svg>
+          Karta to'ldirish
+        </button>
+        <button
+          class="pp-btn-ghost"
+          style="font-size: 13.5px; padding: 11px 18px"
+          @click="router.push('/pay/utility')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path>
+          </svg>
+          Kommunal to'lovlar
+        </button>
       </div>
     </div>
   </q-page>

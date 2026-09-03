@@ -87,6 +87,13 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/seed/s12-c2b-activate.yaml
 
+  - include:
+      file: db/changelog/changes/stage-1/019-fee-type-percentage-plus-flat.yaml
+
   # Stage 4 — A2P (account-to-person / bank pull)
   - include:
       file: db/changelog/changes/stage-4/301-a2p-activate.yaml
+
+  # Stage 5 — P2S (person-to-savings / Paynet utility payments)
+  - include:
+      file: db/changelog/changes/stage-5/401-p2s-activate.yaml

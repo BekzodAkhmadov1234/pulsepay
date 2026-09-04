@@ -170,16 +170,18 @@ public class P2STransferService {
         // 5. Limit check
         limitService.checkLimits(userId, sender.kycLevel(), amount, P2S_TRANSFER_TYPE_ID);
 
-        // 6. Fee calculation (destination network = "paynet")
+        // 6. Fee calculation (missing rule = hard fail; amount outside range = hard fail)
         Instant now = Instant.now();
         var feeResult = feeService.calculate(amount, P2S_TRANSFER_TYPE_ID,
                 senderCardNetwork.toLowerCase(), DEST_NETWORK, amount.currency().name(), now);
         if (feeResult.isEmpty()) {
-            log.warn("No P2S fee rule matched: srcNet={}, dstNet={}, amount={}",
-                    senderCardNetwork, DEST_NETWORK, amount);
+            throw new DomainException(
+                    "No active fee rule for P2S transfer (%s → %s)".formatted(senderCardNetwork, DEST_NETWORK));
         }
-        Money feeAmount        = feeResult.map(r -> r.fee()).orElse(Money.ofTiyin(0, CurrencyCode.UZS));
-        UUID appliedFeeRuleId  = feeResult.map(r -> r.appliedRule().id()).orElse(null);
+        FeeService.FeeResult fr = feeResult.get();
+        feeService.validateAmountRange(fr.appliedRule(), amount.amount());
+        Money feeAmount        = fr.fee();
+        UUID appliedFeeRuleId  = fr.appliedRule().id();
 
         // 7. Route resolution
         TransferRoute route = routingService.resolve(senderCardNetwork.toLowerCase(),

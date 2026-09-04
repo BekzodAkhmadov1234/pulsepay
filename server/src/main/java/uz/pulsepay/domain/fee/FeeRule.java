@@ -6,6 +6,7 @@ import java.util.UUID;
 public record FeeRule(
         UUID id,
         String name,
+        String mode,
         String sourceNetwork,
         String destinationNetwork,
         long minAmount,

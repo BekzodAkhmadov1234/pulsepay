@@ -142,12 +142,19 @@ public class TransferService {
         // 7. Limit check
         limitService.checkLimits(senderId, sender.kycLevel(), amount, transferTypeId);
 
-        // 8. Fee calculation
+        // 8. Fee calculation (missing rule = hard fail; amount outside range = hard fail)
         Instant now = Instant.now();
         var feeResult = feeService.calculate(amount, transferTypeId,
                 senderCardNetwork, recipientCardNetwork, amount.currency().name(), now);
-        Money feeAmount = feeResult.map(r -> r.fee()).orElse(Money.ofTiyin(0, CurrencyCode.UZS));
-        UUID appliedFeeRuleId = feeResult.map(r -> r.appliedRule().id()).orElse(null);
+        if (feeResult.isEmpty()) {
+            throw new DomainException(
+                    "No active fee rule for transfer type %d (%s → %s)"
+                            .formatted(transferTypeId, senderCardNetwork, recipientCardNetwork));
+        }
+        FeeService.FeeResult fr = feeResult.get();
+        feeService.validateAmountRange(fr.appliedRule(), amount.amount());
+        Money feeAmount = fr.fee();
+        UUID appliedFeeRuleId = fr.appliedRule().id();
 
         // 9. Route resolution
         TransferRoute route = routingService.resolve(senderCardNetwork, recipientCardNetwork,

@@ -24,6 +24,9 @@ public class FeeRuleEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "mode", length = 10)
+    private String mode;
+
     @Column(name = "source_network", length = 20)
     private String sourceNetwork;
 
@@ -92,7 +95,7 @@ public class FeeRuleEntity {
 
     protected FeeRuleEntity() {}
 
-    FeeRuleEntity(UUID id, String name, String sourceNetwork, String destinationNetwork,
+    FeeRuleEntity(UUID id, String name, String mode, String sourceNetwork, String destinationNetwork,
                   long minAmount, Long maxAmount, FeeType feeType, Long fixedAmount,
                   Integer percentageBps, Long minFeeAmount, Long maxFeeAmount,
                   String currencyCode, int priority, boolean isActive,
@@ -102,6 +105,7 @@ public class FeeRuleEntity {
                   UUID createdByAdminId, UUID updatedByAdminId) {
         this.id = id;
         this.name = name;
+        this.mode = mode;
         this.sourceNetwork = sourceNetwork;
         this.destinationNetwork = destinationNetwork;
         this.minAmount = minAmount;
@@ -126,7 +130,7 @@ public class FeeRuleEntity {
     }
 
     public FeeRule toDomain() {
-        return new FeeRule(id, name, sourceNetwork, destinationNetwork, minAmount, maxAmount,
+        return new FeeRule(id, name, mode, sourceNetwork, destinationNetwork, minAmount, maxAmount,
                 feeType, fixedAmount, percentageBps, minFeeAmount, maxFeeAmount, currencyCode,
                 priority, isActive, effectiveFrom, effectiveTo, transferTypeId, feePayer, feeRecipient,
                 createdAt, createdByAdminId, updatedByAdminId);
@@ -135,7 +139,7 @@ public class FeeRuleEntity {
     public static FeeRuleEntity fromDomain(FeeRule r) {
         Instant now = Instant.now();
         return new FeeRuleEntity(
-                r.id(), r.name(), r.sourceNetwork(), r.destinationNetwork(),
+                r.id(), r.name(), r.mode(), r.sourceNetwork(), r.destinationNetwork(),
                 r.minAmount(), r.maxAmount(), r.feeType(), r.fixedAmount(),
                 r.percentageBps(), r.minFeeAmount(), r.maxFeeAmount(),
                 r.currencyCode(), r.priority(), r.isActive(),

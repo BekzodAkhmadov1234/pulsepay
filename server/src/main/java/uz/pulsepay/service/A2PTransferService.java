@@ -173,15 +173,18 @@ public class A2PTransferService {
         // 5. Limit check
         limitService.checkLimits(userId, user.kycLevel(), amount, A2P_TRANSFER_TYPE_ID);
 
-        // 6. Fee calculation (source=bank, dest=uzcard/humo)
+        // 6. Fee calculation (missing rule = hard fail; amount outside range = hard fail)
         Instant now = Instant.now();
         var feeResult = feeService.calculate(amount, A2P_TRANSFER_TYPE_ID,
                 SOURCE_NETWORK, destCardNetwork.toLowerCase(), amount.currency().name(), now);
         if (feeResult.isEmpty()) {
-            log.warn("No A2P fee rule matched: srcNet={}, dstNet={}", SOURCE_NETWORK, destCardNetwork);
+            throw new DomainException(
+                    "No active fee rule for A2P transfer (%s → %s)".formatted(SOURCE_NETWORK, destCardNetwork));
         }
-        Money feeAmount = feeResult.map(r -> r.fee()).orElse(Money.ofTiyin(0, CurrencyCode.UZS));
-        UUID appliedFeeRuleId = feeResult.map(r -> r.appliedRule().id()).orElse(null);
+        FeeService.FeeResult fr = feeResult.get();
+        feeService.validateAmountRange(fr.appliedRule(), amount.amount());
+        Money feeAmount = fr.fee();
+        UUID appliedFeeRuleId = fr.appliedRule().id();
 
         // 7. Route resolution
         TransferRoute route = routingService.resolve(SOURCE_NETWORK, destCardNetwork.toLowerCase(),

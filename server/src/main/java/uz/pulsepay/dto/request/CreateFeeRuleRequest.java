@@ -13,6 +13,7 @@ import java.util.List;
 
 public record CreateFeeRuleRequest(
         @NotBlank String name,
+        @Size(max = 10) String mode,
         @Size(max = 20) String sourceNetwork,
         @Size(max = 20) String destinationNetwork,
         @Min(0) long minAmount,

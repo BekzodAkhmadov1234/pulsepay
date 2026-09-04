@@ -12,6 +12,7 @@ import java.util.UUID;
 public record FeeRuleResponse(
         UUID id,
         String name,
+        String mode,
         String sourceNetwork,
         String destinationNetwork,
         long minAmount,
@@ -35,7 +36,7 @@ public record FeeRuleResponse(
 ) {
     public static FeeRuleResponse from(FeeRule rule, List<FeeRuleTierResponse> tiers) {
         return new FeeRuleResponse(
-                rule.id(), rule.name(),
+                rule.id(), rule.name(), rule.mode(),
                 rule.sourceNetwork(), rule.destinationNetwork(),
                 rule.minAmount(), rule.maxAmount(),
                 rule.feeType(), rule.fixedAmount(), rule.percentageBps(),

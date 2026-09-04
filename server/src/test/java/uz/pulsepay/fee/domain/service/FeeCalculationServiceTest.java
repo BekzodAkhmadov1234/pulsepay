@@ -53,7 +53,7 @@ class FeeCalculationServiceTest {
                                  Long minFee, Long maxFee, int priority,
                                  String src, String dst, Integer transferTypeId,
                                  FeePayer payer) {
-        return new FeeRule(id, "test-rule", src, dst,
+        return new FeeRule(id, "test-rule", null, src, dst,
                 0L, null, type, fixed, bps, minFee, maxFee,
                 UZS, priority, true,
                 EPOCH, null, transferTypeId,
@@ -234,7 +234,7 @@ class FeeCalculationServiceTest {
     }
 
     @Test
-    void percentage_plus_flat_matches_php_formula() {
+    void percentage_plus_flat_formula_correctness() {
         // fee = (5_000_000 × 150 + 5_000) / 10_000 + 20_000 = 75_000 + 20_000 = 95_000
         FeeRule rule = senderRule(UUID.randomUUID(), FeeType.PERCENTAGE_PLUS_FLAT, 20_000L, 150, null, null, 100, null, null, P2P);
 

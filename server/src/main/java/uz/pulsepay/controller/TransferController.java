@@ -23,14 +23,15 @@ import uz.pulsepay.service.TransferService;
 import uz.pulsepay.domain.shared.Money;
 import uz.pulsepay.dto.request.ConfirmOtpRequest;
 import uz.pulsepay.dto.request.InitiateTransferRequest;
+import uz.pulsepay.dto.response.FeePreviewResponse;
 import uz.pulsepay.dto.response.TransferResponse;
 import uz.pulsepay.domain.transfer.TransferChannel;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+
 
 @Tag(name = "Transfers", description = "P2P card transfer lifecycle: initiate → OTP confirm → completed/failed")
 @SecurityRequirement(name = "bearerAuth")
@@ -48,10 +49,11 @@ public class TransferController {
 
     @Operation(summary = "Preview transfer fee",
                description = "Returns the calculated fee for a given amount, networks, and transfer type. "
-                       + "No transfer is created. Safe to call on every keystroke.")
-    @ApiResponse(responseCode = "200", description = "Fee calculated (feeAmountUzs=0 means no rule matched)")
+                       + "Response fields: feeAmountUzs, totalAmountUzs, minAmountUzs, "
+                       + "maxAmountUzs, commissionPercent. No transfer is created.")
+    @ApiResponse(responseCode = "200", description = "Fee preview")
     @GetMapping("/fee-preview")
-    public ResponseEntity<Map<String, Object>> feePreview(
+    public ResponseEntity<FeePreviewResponse> feePreview(
             @RequestParam BigDecimal amountUzs,
             @RequestParam String sourceNetwork,
             @RequestParam String destNetwork,
@@ -59,10 +61,16 @@ public class TransferController {
         Money amount = Money.fromUzs(amountUzs);
         var result = feeService.calculate(amount, transferTypeId,
                 sourceNetwork.toLowerCase(), destNetwork.toLowerCase(), "UZS", Instant.now());
-        BigDecimal feeUzs = result
-                .map(r -> BigDecimal.valueOf(r.fee().amount()).divide(BigDecimal.valueOf(100)))
-                .orElse(BigDecimal.ZERO);
-        return ResponseEntity.ok(Map.of("feeAmountUzs", feeUzs));
+        if (result.isEmpty()) {
+            return ResponseEntity.ok(FeePreviewResponse.noRule(amount.amount()));
+        }
+        var r = result.get();
+        return ResponseEntity.ok(FeePreviewResponse.of(
+                amount.amount(),
+                r.fee().amount(),
+                r.appliedRule().minAmount(),
+                r.appliedRule().maxAmount(),
+                r.appliedRule().percentageBps()));
     }
 
     @Operation(summary = "Initiate a transfer",

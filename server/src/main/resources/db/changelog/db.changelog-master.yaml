@@ -101,3 +101,9 @@ databaseChangeLog:
   # Stage 6 — Paynet categories, search, popular, mobile top-up
   - include:
       file: db/changelog/changes/stage-6/402-paynet-categories-search.yaml
+
+  # Stage 7 — Fee system parity (mode column, P2P rule updates, formula enforcement)
+  - include:
+      file: db/changelog/changes/stage-7/403-fee-rules-mode.yaml
+  - include:
+      file: db/changelog/changes/stage-7/404-p2p-fee-rules-seed.yaml

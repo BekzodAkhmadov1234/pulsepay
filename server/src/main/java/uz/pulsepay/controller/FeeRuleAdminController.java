@@ -74,6 +74,15 @@ public class FeeRuleAdminController {
         return ResponseEntity.ok(toResponse(rule));
     }
 
+    @Operation(summary = "Update a fee rule in-place",
+               description = "Updates all mutable fields of a fee rule without creating a new version.")
+    @PutMapping("/{id}")
+    public ResponseEntity<FeeRuleResponse> update(@PathVariable UUID id,
+                                                   @RequestBody @Valid CreateFeeRuleRequest request) {
+        FeeRule rule = feeService.updateRule(id, toCommand(request));
+        return ResponseEntity.ok(toResponse(rule));
+    }
+
     @Operation(summary = "Supersede a fee rule")
     @PutMapping("/{id}/supersede")
     public ResponseEntity<FeeRuleResponse> supersede(@PathVariable UUID id,
@@ -109,7 +118,7 @@ public class FeeRuleAdminController {
         List<AddTierCommand> tiers = r.tiers() == null ? null :
                 r.tiers().stream().map(FeeRuleAdminController::toTierCommand).toList();
         return new CreateFeeRuleCommand(
-                r.name(), r.sourceNetwork(), r.destinationNetwork(),
+                r.name(), r.mode(), r.sourceNetwork(), r.destinationNetwork(),
                 r.minAmount(), r.maxAmount(),
                 r.feeType(), r.fixedAmount(), r.percentageBps(),
                 r.minFeeAmount(), r.maxFeeAmount(),

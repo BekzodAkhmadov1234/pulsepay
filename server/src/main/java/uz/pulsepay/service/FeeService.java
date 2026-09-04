@@ -35,6 +35,7 @@ public class FeeService {
 
     public record CreateFeeRuleCommand(
             String name,
+            String mode,
             String sourceNetwork,
             String destinationNetwork,
             long minAmount,
@@ -120,11 +121,11 @@ public class FeeService {
     }
 
     /**
-     * Ports PHP OperationParam.calculateFeeAmount():
+     * Computes combined percentage + flat fee:
      *   fee = round(amount × percent_com / 100) + flat_com
      * Java equivalent (percent_com × 100 = percentageBps):
      *   fee = (amount × bps + 5_000) / 10_000 + fixedAmount
-     * Min/max caps are applied to the combined total, matching PHP semantics.
+     * Min/max caps are applied to the combined total.
      */
     private long computePercentagePlusFlat(FeeRule rule, long amount) {
         long pct  = (amount * rule.percentageBps() + 5_000L) / 10_000L;
@@ -166,7 +167,7 @@ public class FeeService {
 
         Instant now = Instant.now();
         FeeRule rule = new FeeRule(
-                UUID.randomUUID(), cmd.name(),
+                UUID.randomUUID(), cmd.name(), cmd.mode(),
                 cmd.sourceNetwork(), cmd.destinationNetwork(),
                 cmd.minAmount(), cmd.maxAmount(),
                 cmd.feeType(), cmd.fixedAmount(), cmd.percentageBps(),
@@ -212,7 +213,7 @@ public class FeeService {
         FeeRule rule = getRule(id);
 
         FeeRule updated = new FeeRule(
-                rule.id(), rule.name(),
+                rule.id(), rule.name(), rule.mode(),
                 rule.sourceNetwork(), rule.destinationNetwork(),
                 rule.minAmount(), rule.maxAmount(),
                 rule.feeType(), rule.fixedAmount(), rule.percentageBps(),
@@ -234,7 +235,7 @@ public class FeeService {
 
         // Run overlap check using the rule's own scope, excluding itself
         CreateFeeRuleCommand checkCmd = new CreateFeeRuleCommand(
-                rule.name(), rule.sourceNetwork(), rule.destinationNetwork(),
+                rule.name(), rule.mode(), rule.sourceNetwork(), rule.destinationNetwork(),
                 rule.minAmount(), rule.maxAmount(),
                 rule.feeType(), rule.fixedAmount(), rule.percentageBps(),
                 rule.minFeeAmount(), rule.maxFeeAmount(),
@@ -244,7 +245,7 @@ public class FeeService {
         validateNoOverlap(rule.id(), checkCmd);
 
         FeeRule updated = new FeeRule(
-                rule.id(), rule.name(),
+                rule.id(), rule.name(), rule.mode(),
                 rule.sourceNetwork(), rule.destinationNetwork(),
                 rule.minAmount(), rule.maxAmount(),
                 rule.feeType(), rule.fixedAmount(), rule.percentageBps(),
@@ -267,7 +268,7 @@ public class FeeService {
         // Deactivate old rule (set effective_to = now)
         Instant now = Instant.now();
         FeeRule deactivated = new FeeRule(
-                old.id(), old.name(),
+                old.id(), old.name(), old.mode(),
                 old.sourceNetwork(), old.destinationNetwork(),
                 old.minAmount(), old.maxAmount(),
                 old.feeType(), old.fixedAmount(), old.percentageBps(),
@@ -280,7 +281,7 @@ public class FeeService {
 
         // Create the replacement rule (no overlap check needed since old is deactivated)
         FeeRule newRule = new FeeRule(
-                UUID.randomUUID(), replacement.name(),
+                UUID.randomUUID(), replacement.name(), replacement.mode(),
                 replacement.sourceNetwork(), replacement.destinationNetwork(),
                 replacement.minAmount(), replacement.maxAmount(),
                 replacement.feeType(), replacement.fixedAmount(), replacement.percentageBps(),
@@ -293,6 +294,49 @@ public class FeeService {
         FeeRule saved = feeRuleRepository.save(FeeRuleEntity.fromDomain(newRule)).toDomain();
         log.info("Fee rule superseded: oldId={}, newId={}, by adminId={}", id, saved.id(), adminId);
         return saved;
+    }
+
+    /**
+     * In-place update of a fee rule's fields.
+     * Preserves id, createdAt, createdByAdminId; updates all mutable fields.
+     */
+    @Transactional
+    public FeeRule updateRule(UUID id, CreateFeeRuleCommand cmd) {
+        UUID adminId = requireAdminId();
+        FeeRule existing = getRule(id);
+
+        FeeRule updated = new FeeRule(
+                existing.id(), cmd.name(), cmd.mode(),
+                cmd.sourceNetwork(), cmd.destinationNetwork(),
+                cmd.minAmount(), cmd.maxAmount(),
+                cmd.feeType(), cmd.fixedAmount(), cmd.percentageBps(),
+                cmd.minFeeAmount(), cmd.maxFeeAmount(),
+                cmd.currencyCode(), cmd.priority(), existing.isActive(),
+                cmd.effectiveFrom() != null ? cmd.effectiveFrom() : existing.effectiveFrom(),
+                cmd.effectiveTo(),
+                cmd.transferTypeId(), cmd.feePayer(), cmd.feeRecipient(),
+                existing.createdAt(), existing.createdByAdminId(), adminId);
+
+        FeeRule saved = feeRuleRepository.save(FeeRuleEntity.fromDomain(updated)).toDomain();
+        log.info("Fee rule updated in-place: id={}, by adminId={}", id, adminId);
+        return saved;
+    }
+
+    /**
+     * Validates that amount is within the matched fee rule's min/max range.
+     * Call this AFTER calculate() returns a non-empty result.
+     */
+    public void validateAmountRange(FeeRule rule, long amountTiyin) {
+        if (amountTiyin < rule.minAmount()) {
+            throw new DomainException(
+                    "Amount is below minimum for this transfer type (min=%d tiyin)"
+                            .formatted(rule.minAmount()));
+        }
+        if (rule.maxAmount() != null && amountTiyin > rule.maxAmount()) {
+            throw new DomainException(
+                    "Amount exceeds maximum for this transfer type (max=%d tiyin)"
+                            .formatted(rule.maxAmount()));
+        }
     }
 
     @Transactional

@@ -161,16 +161,18 @@ public class BankTransferService {
         // 6. Limit check
         limitService.checkLimits(senderId, sender.kycLevel(), amount, P2A_TRANSFER_TYPE_ID);
 
-        // 7. Fee calculation (destination network = "bank")
+        // 7. Fee calculation (missing rule = hard fail; amount outside range = hard fail)
         Instant now = Instant.now();
         var feeResult = feeService.calculate(amount, P2A_TRANSFER_TYPE_ID,
                 senderCardNetwork, DEST_NETWORK, amount.currency().name(), now);
         if (feeResult.isEmpty()) {
-            log.warn("No P2A fee rule matched: srcNet={}, dstNet={}, amount={}",
-                    senderCardNetwork, DEST_NETWORK, amount);
+            throw new DomainException(
+                    "No active fee rule for P2A transfer (%s → %s)".formatted(senderCardNetwork, DEST_NETWORK));
         }
-        Money feeAmount = feeResult.map(r -> r.fee()).orElse(Money.ofTiyin(0, CurrencyCode.UZS));
-        UUID appliedFeeRuleId = feeResult.map(r -> r.appliedRule().id()).orElse(null);
+        FeeService.FeeResult fr = feeResult.get();
+        feeService.validateAmountRange(fr.appliedRule(), amount.amount());
+        Money feeAmount = fr.fee();
+        UUID appliedFeeRuleId = fr.appliedRule().id();
 
         // 8. Route resolution
         TransferRoute route = routingService.resolve(senderCardNetwork, DEST_NETWORK,

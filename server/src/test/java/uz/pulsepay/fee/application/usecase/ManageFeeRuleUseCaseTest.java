@@ -193,14 +193,14 @@ class ManageFeeRuleUseCaseTest {
 
     private static CreateFeeRuleCommand fixedCommand(String name, int priority) {
         return new CreateFeeRuleCommand(
-                name, null, null, 0L, null,
+                name, null, null, null, 0L, null,
                 FeeType.FIXED, 1000L, null, null, null,
                 "UZS", priority, Instant.EPOCH, null,
                 1, FeePayer.SENDER, FeeRecipient.PLATFORM, null);
     }
 
     private static FeeRule ruleWithPriority(UUID id, int priority, Instant from, Instant to) {
-        return new FeeRule(id, "rule", null, null,
+        return new FeeRule(id, "rule", null, null, null,
                 0L, null, FeeType.FIXED, 1000L, null, null, null,
                 "UZS", priority, true,
                 from, to, 1,
@@ -209,7 +209,7 @@ class ManageFeeRuleUseCaseTest {
     }
 
     private static FeeRule tieredRule(UUID id) {
-        return new FeeRule(id, "tiered-rule", null, null,
+        return new FeeRule(id, "tiered-rule", null, null, null,
                 0L, null, FeeType.TIERED, null, null, null, null,
                 "UZS", 50, true,
                 Instant.EPOCH, null, 1,

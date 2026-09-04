@@ -1,0 +1,14 @@
+databaseChangeLog:
+  # Stage 7 — Step 4: Add mode column to fee_rules
+  - changeSet:
+      id: 403-fee-rules-add-mode
+      author: pulsepay
+      changes:
+        - addColumn:
+            tableName: fee_rules
+            columns:
+              - column:
+                  name: mode
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: true

@@ -1,0 +1,100 @@
+databaseChangeLog:
+  # Stage 7 — Step 5: Update P2P fee rules
+  #
+  # Changes vs existing s09 rules:
+  #   1. fee_type → percentage_plus_flat (percent_com + flat_com formula)
+  #   2. fixed_amount = 0 (flat fee is zero; formula still identical)
+  #   3. mode = 'p2p'
+  #   4. min_amount / max_amount set (amount range: 1 000 – 5 000 000 UZS)
+  #   5. Add missing humo→uzcard rule
+  #
+  # All amounts in tiyin (1 UZS = 100 tiyin).
+
+  # ── Patch existing P2P catch-all rule (0102) ──────────────────────────────────
+  - changeSet:
+      id: 404-patch-p2p-catchall
+      author: pulsepay
+      changes:
+        - update:
+            tableName: fee_rules
+            where: "id = '00000000-0000-0000-0000-000000000102'"
+            columns:
+              - column: { name: mode,           value: "p2p" }
+              - column: { name: fee_type,        value: "percentage_plus_flat" }
+              - column: { name: fixed_amount,    valueNumeric: 0 }
+              - column: { name: min_amount,      valueNumeric: 100000 }
+              - column: { name: max_amount,      valueNumeric: 500000000 }
+
+  # ── Patch UzCard→UzCard rule (0103) ──────────────────────────────────────────
+  - changeSet:
+      id: 404-patch-p2p-uzcard-uzcard
+      author: pulsepay
+      changes:
+        - update:
+            tableName: fee_rules
+            where: "id = '00000000-0000-0000-0000-000000000103'"
+            columns:
+              - column: { name: mode,           value: "p2p" }
+              - column: { name: fee_type,        value: "percentage_plus_flat" }
+              - column: { name: fixed_amount,    valueNumeric: 0 }
+              - column: { name: min_amount,      valueNumeric: 100000 }
+              - column: { name: max_amount,      valueNumeric: 500000000 }
+
+  # ── Patch UzCard→Humo rule (0104) ─────────────────────────────────────────────
+  - changeSet:
+      id: 404-patch-p2p-uzcard-humo
+      author: pulsepay
+      changes:
+        - update:
+            tableName: fee_rules
+            where: "id = '00000000-0000-0000-0000-000000000104'"
+            columns:
+              - column: { name: mode,           value: "p2p" }
+              - column: { name: fee_type,        value: "percentage_plus_flat" }
+              - column: { name: fixed_amount,    valueNumeric: 0 }
+              - column: { name: min_amount,      valueNumeric: 100000 }
+              - column: { name: max_amount,      valueNumeric: 500000000 }
+
+  # ── Patch Humo→Humo tiered rule (0105) ───────────────────────────────────────
+  - changeSet:
+      id: 404-patch-p2p-humo-humo
+      author: pulsepay
+      changes:
+        - update:
+            tableName: fee_rules
+            where: "id = '00000000-0000-0000-0000-000000000105'"
+            columns:
+              - column: { name: mode,           value: "p2p" }
+              - column: { name: min_amount,      valueNumeric: 100000 }
+              - column: { name: max_amount,      valueNumeric: 500000000 }
+
+  # ── Add missing Humo→UzCard rule ─────────────────────────────────────────────
+  # HNB2UNB / HNU2UNB — same cross-network rate as UzCard→Humo (1.5%)
+  - changeSet:
+      id: 404-fee-rule-p2p-humo-uzcard
+      author: pulsepay
+      changes:
+        - insert:
+            tableName: fee_rules
+            columns:
+              - column: { name: id,                 value: "00000000-0000-0000-0000-000000000107" }
+              - column: { name: name,                value: "P2P Humo→UzCard 1.5% (floor 5 UZS, cap 1500 UZS)" }
+              - column: { name: mode,                value: "p2p" }
+              - column: { name: transfer_type_id,    valueNumeric: 1 }
+              - column: { name: source_network,      value: "humo" }
+              - column: { name: destination_network, value: "uzcard" }
+              - column: { name: fee_type,            value: "percentage_plus_flat" }
+              - column: { name: percentage_bps,      valueNumeric: 150 }
+              - column: { name: fixed_amount,        valueNumeric: 0 }
+              - column: { name: min_fee_amount,      valueNumeric: 500 }
+              - column: { name: max_fee_amount,      valueNumeric: 150000 }
+              - column: { name: min_amount,          valueNumeric: 100000 }
+              - column: { name: max_amount,          valueNumeric: 500000000 }
+              - column: { name: currency_code,       value: "UZS" }
+              - column: { name: priority,            valueNumeric: 50 }
+              - column: { name: is_active,           valueBoolean: true }
+              - column: { name: fee_payer,           value: "sender" }
+              - column: { name: fee_recipient,       value: "platform" }
+              - column: { name: effective_from,      valueComputed: "NOW()" }
+              - column: { name: created_at,          valueComputed: "NOW()" }
+              - column: { name: updated_at,          valueComputed: "NOW()" }

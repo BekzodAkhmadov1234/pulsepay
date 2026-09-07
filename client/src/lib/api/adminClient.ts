@@ -1,4 +1,5 @@
 import { ApiError } from './client';
+import { getLang } from '../../stores/lang';
 
 const ADMIN_BASE = (import.meta.env.VITE_ADMIN_API_URL as string | undefined) ?? '/admin/v1';
 
@@ -18,6 +19,7 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
   const token = getAdminToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'X-Lang': getLang(),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   };

@@ -150,7 +150,7 @@ public class P2STransferService {
         User sender = userRepository.findById(userId)
                 .map(UserEntity::toDomain)
                 .filter(User::isActive)
-                .orElseThrow(() -> new NotFoundException("Sender not found or inactive"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.sender"));
 
         // 3. Validate sender instrument ownership
         Instrument senderInstrument = instrumentRepository
@@ -191,7 +191,7 @@ public class P2STransferService {
         PaynetProvider provider = paynetProviderRepository.findByServiceCode(serviceCode)
                 .map(PaynetProviderEntity::toDomain)
                 .filter(PaynetProvider::isActive)
-                .orElseThrow(() -> new DomainException("Unknown or inactive Paynet service: " + serviceCode));
+                .orElseThrow(() -> new DomainException("error.paynet.unknown_service"));
 
         // 9. Persist transfer
         Transfer transfer = transferRepository.save(TransferEntity.fromDomain(new Transfer(
@@ -236,7 +236,7 @@ public class P2STransferService {
 
         Transfer transfer = transferRepository.findById(transferId)
                 .map(TransferEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("Transfer not found"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.transfer"));
 
         TransferStateMachine.assertTransition(transfer.status(), TransferStatus.PROCESSING);
 
@@ -300,7 +300,7 @@ public class P2STransferService {
                     UUID.randomUUID(), transferId,
                     TransferStatus.PROCESSING, TransferStatus.FAILED,
                     "Paynet rejected: " + paynetResult.statusMessage(), Instant.now())));
-            throw new DomainException("Paynet payment failed: " + paynetResult.statusMessage());
+            throw new DomainException("error.paynet.payment_failed");
         }
 
         // Post double-entry ledger (card_clearing → paynet_clearing)

@@ -29,6 +29,9 @@ public class DeviceEntity {
     @Column(name = "push_token")
     private String pushToken;
 
+    @Column(name = "lang", length = 5)
+    private String lang;
+
     @Column(name = "first_seen_at", nullable = false, updatable = false)
     private Instant firstSeenAt;
 
@@ -41,23 +44,24 @@ public class DeviceEntity {
     protected DeviceEntity() {}
 
     DeviceEntity(UUID id, UUID userId, String deviceFingerprint, String platform,
-                 String pushToken, Instant firstSeenAt, Instant lastSeenAt, boolean trusted) {
+                 String pushToken, String lang, Instant firstSeenAt, Instant lastSeenAt, boolean trusted) {
         this.id = id;
         this.userId = userId;
         this.deviceFingerprint = deviceFingerprint;
         this.platform = platform;
         this.pushToken = pushToken;
+        this.lang = lang;
         this.firstSeenAt = firstSeenAt;
         this.lastSeenAt = lastSeenAt;
         this.trusted = trusted;
     }
 
     public Device toDomain() {
-        return new Device(id, userId, deviceFingerprint, platform, pushToken, firstSeenAt, lastSeenAt, trusted);
+        return new Device(id, userId, deviceFingerprint, platform, pushToken, lang, firstSeenAt, lastSeenAt, trusted);
     }
 
     public static DeviceEntity fromDomain(Device d) {
         return new DeviceEntity(d.id(), d.userId(), d.deviceFingerprint(), d.platform(),
-                d.pushToken(), d.firstSeenAt(), d.lastSeenAt(), d.trusted());
+                d.pushToken(), d.lang(), d.firstSeenAt(), d.lastSeenAt(), d.trusted());
     }
 }

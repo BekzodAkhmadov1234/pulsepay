@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 501-device-lang
+      author: pulsepay
+      comment: >
+        Add lang column to devices table to store the user's preferred UI language
+        per device. Supported values: uz, ru, en, zh, uz_c.
+        Defaults to 'uz' (most common for Uzbek market).
+      changes:
+        - addColumn:
+            tableName: devices
+            columns:
+              - column:
+                  name: lang
+                  type: VARCHAR(5)
+                  defaultValue: 'uz'
+                  constraints:
+                    nullable: false
+        - addCheckConstraint:
+            tableName: devices
+            constraintName: chk_devices_lang
+            checkCondition: "lang IN ('uz', 'ru', 'en', 'zh', 'uz_c')"

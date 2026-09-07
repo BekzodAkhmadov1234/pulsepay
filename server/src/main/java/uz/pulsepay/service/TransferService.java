@@ -120,7 +120,7 @@ public class TransferService {
         User sender = userRepository.findById(senderId)
                 .map(UserEntity::toDomain)
                 .filter(User::isActive)
-                .orElseThrow(() -> new NotFoundException("Sender not found or inactive"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.sender"));
 
         // 3. Validate instrument ownership (Risk #3)
         Instrument senderInstrument   = validateInstrumentOwnership(senderInstrumentId, senderId);
@@ -198,7 +198,7 @@ public class TransferService {
 
         Transfer transfer = transferRepository.findById(transferId)
                 .map(TransferEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("Transfer not found"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.transfer"));
 
         // State machine guard: only OTP_PENDING → PROCESSING is legal here
         TransferStateMachine.assertTransition(transfer.status(), TransferStatus.PROCESSING);
@@ -287,7 +287,7 @@ public class TransferService {
     public Transfer getById(UUID transferId, UUID requestingUserId) {
         Transfer transfer = transferRepository.findById(transferId)
                 .map(TransferEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("Transfer not found"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.transfer"));
 
         boolean isSender = participantRepository
                 .findByTransferIdAndRole(transferId, ParticipantRole.SENDER)
@@ -299,7 +299,7 @@ public class TransferService {
                 .orElse(false);
 
         if (!isSender && !isRecipient) {
-            throw new DomainException("Access denied: not a participant in this transfer");
+            throw new DomainException("error.transfer.access_denied");
         }
         return transfer;
     }

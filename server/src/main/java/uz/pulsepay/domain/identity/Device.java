@@ -9,6 +9,7 @@ public record Device(
         String deviceFingerprint,
         String platform,
         String pushToken,
+        String lang,
         Instant firstSeenAt,
         Instant lastSeenAt,
         boolean trusted

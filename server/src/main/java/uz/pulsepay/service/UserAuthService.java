@@ -88,7 +88,7 @@ public class UserAuthService {
         userRepository.findById(userId)
                 .map(UserEntity::toDomain)
                 .filter(User::isActive)
-                .orElseThrow(() -> new NotFoundException("User not found or inactive"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.user"));
         String rawCode = otpService.generateAndSave(userId, purpose, targetId);
         log.debug("OTP generated: userId={}, purpose={}", userId, purpose);
         // TODO: dispatch rawCode via SMS gateway
@@ -118,13 +118,13 @@ public class UserAuthService {
     public User findByPhone(String phoneE164) {
         return userRepository.findByPhoneE164(phoneE164)
                 .map(UserEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("User not registered"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.user"));
     }
 
     public User findById(UUID userId) {
         return userRepository.findById(userId)
                 .map(UserEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("User not found: " + userId));
+                .orElseThrow(() -> new NotFoundException("error.not_found.user"));
     }
 
     public record VerifyOtpResult(

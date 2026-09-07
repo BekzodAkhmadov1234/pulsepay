@@ -106,15 +106,15 @@ public class OtpService {
                 .orElseThrow(() -> new DomainException("No pending OTP found"));
 
         if (otp.consumedAt() != null) {
-            throw new DomainException("OTP already used");
+            throw new DomainException("error.otp.used");
         }
         if (otp.expiresAt().isBefore(Instant.now())) {
-            throw new DomainException("OTP has expired");
+            throw new DomainException("error.otp.expired");
         }
         if (otp.attemptCount() >= otpProperties.maxAttempts()) {
             // Should have been locked — create/refresh lockout and reject
             applyLockout(userId, "attempt count already at maximum");
-            throw new DomainException("OTP locked — too many attempts");
+            throw new DomainException("error.otp.locked");
         }
 
         if (!sha256(rawCode).equals(otp.codeHash())) {
@@ -122,9 +122,9 @@ public class OtpService {
             short newCount = otpCodeRepository.findAttemptCount(otp.id());
             if (newCount >= otpProperties.maxAttempts()) {
                 applyLockout(userId, "reached " + otpProperties.maxAttempts() + " failed attempts");
-                throw new DomainException("OTP locked — too many failed attempts");
+                throw new DomainException("error.otp.locked");
             }
-            throw new DomainException("Invalid OTP code");
+            throw new DomainException("error.otp.invalid");
         }
 
         otpCodeRepository.markConsumed(otp.id(), Instant.now());

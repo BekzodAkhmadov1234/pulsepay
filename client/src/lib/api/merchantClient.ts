@@ -1,4 +1,5 @@
 import { ApiError } from './client';
+import { getLang } from '../../stores/lang';
 
 const MERCHANT_BASE =
   (import.meta.env.VITE_MERCHANT_API_URL as string | undefined) ?? '/merchant/v1';
@@ -19,6 +20,7 @@ async function merchantRequest<T>(path: string, options: RequestInit = {}): Prom
   const token = getMerchantToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'X-Lang': getLang(),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   };

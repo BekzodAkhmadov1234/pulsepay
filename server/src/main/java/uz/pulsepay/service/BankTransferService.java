@@ -142,7 +142,7 @@ public class BankTransferService {
         User sender = userRepository.findById(senderId)
                 .map(UserEntity::toDomain)
                 .filter(User::isActive)
-                .orElseThrow(() -> new NotFoundException("Sender not found or inactive"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.sender"));
 
         // 3. Validate sender instrument ownership
         Instrument senderInstrument = validateInstrumentOwnership(senderInstrumentId, senderId);
@@ -182,7 +182,7 @@ public class BankTransferService {
         bankRepository.findById(recipientBankId)
                 .map(e -> e.toDomain())
                 .filter(b -> b.isActive())
-                .orElseThrow(() -> new NotFoundException("Bank not found or inactive: " + recipientBankId));
+                .orElseThrow(() -> new NotFoundException("error.not_found.bank"));
 
         // 10. Find or create recipient bank account (party + instrument + bank_account_details)
         BankAccountDetails bankAccountDetails = findOrCreateBankAccount(
@@ -234,7 +234,7 @@ public class BankTransferService {
 
         Transfer transfer = transferRepository.findById(transferId)
                 .map(TransferEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("Transfer not found"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.transfer"));
 
         TransferStateMachine.assertTransition(transfer.status(), TransferStatus.PROCESSING);
 

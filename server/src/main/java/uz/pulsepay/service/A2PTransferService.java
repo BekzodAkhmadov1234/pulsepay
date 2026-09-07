@@ -153,7 +153,7 @@ public class A2PTransferService {
         User user = userRepository.findById(userId)
                 .map(UserEntity::toDomain)
                 .filter(User::isActive)
-                .orElseThrow(() -> new NotFoundException("User not found or inactive"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.user"));
 
         // 3. Validate destination card ownership
         Instrument destInstrument = instrumentRepository
@@ -194,7 +194,7 @@ public class A2PTransferService {
         bankRepository.findById(sourceBankId)
                 .map(e -> e.toDomain())
                 .filter(b -> b.isActive())
-                .orElseThrow(() -> new NotFoundException("Bank not found or inactive: " + sourceBankId));
+                .orElseThrow(() -> new NotFoundException("error.not_found.bank"));
 
         // 9. Find or create source bank account instrument (virtual party)
         BankAccountDetails bankAccount = findOrCreateBankAccount(
@@ -240,7 +240,7 @@ public class A2PTransferService {
 
         Transfer transfer = transferRepository.findById(transferId)
                 .map(TransferEntity::toDomain)
-                .orElseThrow(() -> new NotFoundException("Transfer not found"));
+                .orElseThrow(() -> new NotFoundException("error.not_found.transfer"));
 
         TransferStateMachine.assertTransition(transfer.status(), TransferStatus.PROCESSING);
 
@@ -299,7 +299,7 @@ public class A2PTransferService {
                     UUID.randomUUID(), transferId,
                     TransferStatus.PROCESSING, TransferStatus.FAILED,
                     "Bank pull rejected: " + pullResult.statusMessage(), Instant.now())));
-            throw new DomainException("Bank pull failed: " + pullResult.statusMessage());
+            throw new DomainException("error.bank.pull_failed");
         }
 
         // Credit destination card shadow balance

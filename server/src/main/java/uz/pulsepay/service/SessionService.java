@@ -1,8 +1,10 @@
 package uz.pulsepay.service;
 
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.pulsepay.domain.identity.DeviceEntity;
+import uz.pulsepay.domain.shared.Language;
 import uz.pulsepay.domain.identity.RefreshTokenEntity;
 import uz.pulsepay.domain.identity.SecurityCooldownEntity;
 import uz.pulsepay.domain.identity.SessionEntity;
@@ -62,15 +64,17 @@ public class SessionService {
         boolean isNewDevice = existingOpt.isEmpty();
         Instant now = Instant.now();
 
+        String lang = Language.fromCode(LocaleContextHolder.getLocale().getLanguage()).code();
+
         DeviceEntity deviceEntity;
         if (isNewDevice) {
             Device newDevice = new Device(UUID.randomUUID(), userId, deviceFingerprint,
-                    platform, null, now, now, false);
+                    platform, null, lang, now, now, false);
             deviceEntity = deviceRepository.save(DeviceEntity.fromDomain(newDevice));
         } else {
             Device d = existingOpt.get().toDomain();
             Device updated = new Device(d.id(), d.userId(), d.deviceFingerprint(),
-                    d.platform(), d.pushToken(), d.firstSeenAt(), now, d.trusted());
+                    d.platform(), d.pushToken(), lang, d.firstSeenAt(), now, d.trusted());
             deviceEntity = deviceRepository.save(DeviceEntity.fromDomain(updated));
         }
 

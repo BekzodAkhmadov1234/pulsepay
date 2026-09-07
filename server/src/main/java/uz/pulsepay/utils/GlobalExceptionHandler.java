@@ -1,6 +1,8 @@
 package uz.pulsepay.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -19,58 +21,81 @@ import uz.pulsepay.domain.shared.NotFoundException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+
+    /**
+     * Resolves a message key through {@link MessageSource} using the current request locale
+     * set by {@link LocaleFilter} from the {@code X-Lang} header.
+     *
+     * <p>The {@code codeOrRaw} parameter may be:
+     * <ul>
+     *   <li>A message code like {@code "error.not_found.transfer"} — gets translated.</li>
+     *   <li>A raw English string — returned as-is when no bundle key matches
+     *       (so all existing service messages continue to work unchanged).</li>
+     * </ul>
+     */
+    private String msg(String codeOrRaw) {
+        Locale locale = LocaleContextHolder.getLocale();
+        return messageSource.getMessage(codeOrRaw, null, codeOrRaw, locale);
+    }
+
     // ── 401 Unauthorized — missing or invalid JWT ─────────────────────────────
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
-        return build(HttpStatus.UNAUTHORIZED, "Authentication required: " + ex.getMessage());
+        return build(HttpStatus.UNAUTHORIZED, msg("error.auth.required") + ": " + ex.getMessage());
     }
 
     // ── 403 Forbidden — authenticated but not permitted ───────────────────────
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
-        return build(HttpStatus.FORBIDDEN, "Access denied: " + ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, msg("error.auth.access_denied") + ": " + ex.getMessage());
     }
 
     // ── 403 Forbidden — account is inactive or closed ────────────────────────
 
     @ExceptionHandler(AccountInactiveException.class)
     public ResponseEntity<ErrorResponse> handleAccountInactive(AccountInactiveException ex) {
-        return build(HttpStatus.FORBIDDEN, ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, msg(ex.getMessage()));
     }
 
     // ── 409 Conflict — duplicate phone registration ───────────────────────────
 
     @ExceptionHandler(DuplicatePhoneException.class)
     public ResponseEntity<ErrorResponse> handleDuplicatePhone(DuplicatePhoneException ex) {
-        return build(HttpStatus.CONFLICT, ex.getMessage());
+        return build(HttpStatus.CONFLICT, msg("error.auth.duplicate_phone"));
     }
 
     // ── 409 Conflict — general business conflict (fee rule overlap, etc.) ─────
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
-        return build(HttpStatus.CONFLICT, ex.getMessage());
+        return build(HttpStatus.CONFLICT, msg(ex.getMessage()));
     }
 
     // ── 400 Bad Request — invalid OTP (wrong code, expired, locked out) ──────
 
     @ExceptionHandler(InvalidOtpException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOtp(InvalidOtpException ex) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, msg(ex.getMessage()));
     }
 
     // ── 404 Not Found ────────────────────────────────────────────────────────
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, msg(ex.getMessage()));
     }
 
     // ── 422 Unprocessable Entity (business rule violations) ──────────────────
@@ -81,7 +106,7 @@ public class GlobalExceptionHandler {
                 .timestamp(Instant.now())
                 .status(422)
                 .error("Unprocessable Entity")
-                .message(ex.getMessage())
+                .message(msg(ex.getMessage()))
                 .build();
         return ResponseEntity.status(422).body(body);
     }
@@ -98,7 +123,7 @@ public class GlobalExceptionHandler {
                 .timestamp(Instant.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed for " + fieldErrors.size() + " field(s)")
+                .message(msg("error.validation.failed") + " (" + fieldErrors.size() + " field(s))")
                 .fieldErrors(fieldErrors)
                 .build();
 
@@ -131,8 +156,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
         log.error("Unhandled exception", ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred. Please try again later.");
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, msg("error.unexpected"));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

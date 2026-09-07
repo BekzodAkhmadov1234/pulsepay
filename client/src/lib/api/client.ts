@@ -1,4 +1,5 @@
 import { getToken, clearToken } from '../token';
+import { getLang } from '../../stores/lang';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -18,6 +19,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'X-Lang': getLang(),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   };

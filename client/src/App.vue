@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { RouterView, useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useLangStore, LANG_OPTIONS } from '@/stores/lang';
 
 const auth = useAuthStore();
+const lang = useLangStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -101,32 +103,47 @@ function initials(name: string) {
           </nav>
         </div>
 
-        <div v-if="auth.isAuthenticated" class="pp-header-right">
-          <div class="pp-user">
-            <div class="pp-avatar">
-              {{ initials(auth.user?.fullName || auth.user?.phoneE164 || '?') }}
-            </div>
-            <span class="pp-username">{{ auth.user?.fullName || auth.user?.phoneE164 }}</span>
-          </div>
-          <button class="pp-logout-btn" @click="handleLogout">
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+        <div class="pp-header-right">
+          <div class="pp-lang-switcher">
+            <button
+              v-for="opt in LANG_OPTIONS"
+              :key="opt.code"
+              class="pp-lang-btn"
+              :class="{ active: lang.lang === opt.code }"
+              :title="opt.display"
+              @click="lang.setLang(opt.code)"
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path>
-            </svg>
-            Chiqish
-          </button>
-        </div>
-        <div v-else class="pp-header-right">
-          <RouterLink to="/login" class="pp-ghost-btn">Kirish</RouterLink>
-          <RouterLink to="/register" class="pp-primary-btn">Boshlash</RouterLink>
+              {{ opt.label }}
+            </button>
+          </div>
+
+          <template v-if="auth.isAuthenticated">
+            <div class="pp-user">
+              <div class="pp-avatar">
+                {{ initials(auth.user?.fullName || auth.user?.phoneE164 || '?') }}
+              </div>
+              <span class="pp-username">{{ auth.user?.fullName || auth.user?.phoneE164 }}</span>
+            </div>
+            <button class="pp-logout-btn" @click="handleLogout">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path>
+              </svg>
+              Chiqish
+            </button>
+          </template>
+          <template v-else>
+            <RouterLink to="/login" class="pp-ghost-btn">Kirish</RouterLink>
+            <RouterLink to="/register" class="pp-primary-btn">Boshlash</RouterLink>
+          </template>
         </div>
       </div>
     </q-header>
@@ -595,5 +612,41 @@ a:hover {
 
 .pp-modal-close:hover {
   background: rgba(247, 244, 237, 0.08);
+}
+
+/* ── Language switcher ───────────────────── */
+.pp-lang-switcher {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(247, 244, 237, 0.05);
+  border: 1px solid rgba(247, 244, 237, 0.1);
+  border-radius: 999px;
+}
+
+.pp-lang-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-family: Manrope, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  background: transparent;
+  color: rgba(247, 244, 237, 0.5);
+  letter-spacing: 0.03em;
+}
+
+.pp-lang-btn:hover {
+  color: #f7f4ed;
+  background: rgba(247, 244, 237, 0.07);
+}
+
+.pp-lang-btn.active {
+  background: #29be8c;
+  color: #0e211c;
 }
 </style>

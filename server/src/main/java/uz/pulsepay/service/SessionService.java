@@ -114,6 +114,14 @@ public class SessionService {
                 .orElseThrow(() -> new DomainException("Associated session is revoked or expired"));
     }
 
+    // ── Revoke All Sessions (account closure) ────────────────────────────────
+
+    @Transactional
+    public void revokeAllSessions(UUID userId) {
+        sessionRepository.revokeAllForUser(userId, Instant.now());
+        refreshTokenRepository.revokeAllForUser(userId, Instant.now());
+    }
+
     // ── Revoke Session ────────────────────────────────────────────────────────
 
     @Transactional

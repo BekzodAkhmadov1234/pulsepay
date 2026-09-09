@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useCardsStore } from '@/stores/cards';
 import { useP2STransfersStore } from '@/stores/p2sTransfers';
 import { useAuthStore } from '@/stores/auth';
@@ -10,6 +11,7 @@ import { ApiError } from '@/lib/api/client';
 import type { PaynetProviderDto } from '@/lib/api/p2sTransfers';
 import type { TransferDto } from '@/lib/api/transfers';
 
+const { t } = useI18n();
 const router = useRouter();
 const cardsStore = useCardsStore();
 const p2sStore = useP2STransfersStore();
@@ -84,16 +86,14 @@ const otpError = ref('');
 const searchQuery = ref('');
 const activeCategory = ref<string | null>(null);
 
-const CATEGORY_LABELS: Record<string, string> = {
-  gas: 'Gaz',
-  water: 'Suv',
-  electricity: 'Elektr',
-  mobile: 'Mobil',
-  internet: 'Internet',
-};
-
 function categoryLabel(cat: string): string {
-  return CATEGORY_LABELS[cat] ?? cat;
+  const c = cat.toLowerCase();
+  if (c === 'gas') return t('utility.cat_gas');
+  if (c === 'water') return t('utility.cat_water');
+  if (c === 'electricity') return t('utility.cat_electricity');
+  if (c === 'mobile') return t('utility.cat_mobile');
+  if (c === 'internet') return t('utility.cat_internet');
+  return cat;
 }
 
 /** Distinct categories derived from the loaded provider list. */
@@ -161,12 +161,12 @@ function validate(): boolean {
   const provider = selectedProvider.value!;
   for (const name of provider.fieldNames) {
     if (!serviceFields.value[name]?.trim()) {
-      fieldErrors.value[name] = `${fieldLabel(name)} kiriting`;
+      fieldErrors.value[name] = t('validation.enter_field', { field: fieldLabel(name) });
     }
   }
-  if (!senderCardId.value) fieldErrors.value.card = "To'lov kartasini tanlang";
+  if (!senderCardId.value) fieldErrors.value.card = t('validation.card_payment_required');
   if (!amountStr.value || amountUzs.value <= 0)
-    fieldErrors.value.amount = "To'lov miqdorini kiriting";
+    fieldErrors.value.amount = t('validation.payment_amount_required');
   return Object.keys(fieldErrors.value).length === 0;
 }
 
@@ -200,6 +200,17 @@ function fieldLabel(name: string): string {
   return FIELD_LABELS[name.toLowerCase()] ?? name.replace(/_/g, ' ');
 }
 
+const PROVIDER_NAMES: Record<string, string> = {
+  'gas-uzb': 'Gaz',
+  'water-uzb': 'Suv',
+  'electricity-uzb': 'Elektroenergiya',
+  'internet-uzb': 'Internet',
+};
+
+function providerDisplayName(provider: PaynetProviderDto): string {
+  return PROVIDER_NAMES[provider.serviceCode] ?? provider.serviceName;
+}
+
 async function handleContinue() {
   sendError.value = '';
   if (!validate()) return;
@@ -207,7 +218,7 @@ async function handleContinue() {
   try {
     await validatePrepayment(selectedProvider.value!.serviceCode, serviceFields.value);
   } catch (err) {
-    sendError.value = err instanceof ApiError ? err.message : 'Xizmat vaqtincha mavjud emas.';
+    sendError.value = err instanceof ApiError ? err.message : t('error.generic_short');
     return;
   }
 
@@ -236,7 +247,7 @@ async function handleContinue() {
       }
     }
   } catch (err) {
-    sendError.value = err instanceof ApiError ? err.message : 'Xizmat vaqtincha mavjud emas.';
+    sendError.value = err instanceof ApiError ? err.message : t('error.generic_short');
   }
 }
 
@@ -247,7 +258,7 @@ async function handleConfirmOtp() {
     isOtpStep.value = false;
     completedTransfer.value = result;
   } catch (err) {
-    otpError.value = err instanceof ApiError ? err.message : 'OTP tasdiqlanmadi.';
+    otpError.value = err instanceof ApiError ? err.message : t('error.otp_confirm_failed');
   }
 }
 </script>
@@ -314,10 +325,14 @@ async function handleConfirmOtp() {
             margin: 0 0 2px;
           "
         >
-          {{ selectedProvider ? selectedProvider.serviceName : "Kommunal to'lovlar" }}
+          {{ selectedProvider ? providerDisplayName(selectedProvider) : t('utility.title') }}
         </h1>
         <p style="font-size: 13px; color: rgba(247, 244, 237, 0.5); margin: 0">
-          {{ selectedProvider ? categoryLabel(selectedProvider.category) : 'Xizmat tanlang' }}
+          {{
+            selectedProvider
+              ? categoryLabel(selectedProvider.category)
+              : t('utility.select_provider')
+          }}
         </p>
       </div>
     </div>
@@ -371,17 +386,17 @@ async function handleConfirmOtp() {
             margin-bottom: 6px;
           "
         >
-          To'lov amalga oshirildi
+          {{ t('utility.success_title') }}
         </div>
         <div style="font-size: 14px; color: rgba(247, 244, 237, 0.55)">
-          {{ selectedProvider?.serviceName }} ·
-          {{ completedTransfer.amountUzs.toLocaleString() }} so'm
+          {{ selectedProvider ? providerDisplayName(selectedProvider) : '' }} ·
+          {{ completedTransfer.amountUzs.toLocaleString() }} UZS
         </div>
         <div
           v-if="(completedTransfer.feeAmountUzs ?? 0) > 0"
           style="font-size: 13px; color: rgba(247, 244, 237, 0.4); margin-top: 4px"
         >
-          Komissiya: {{ completedTransfer.feeAmountUzs.toLocaleString() }} UZS
+          {{ t('common.fee') }}: {{ completedTransfer.feeAmountUzs.toLocaleString() }} UZS
         </div>
         <div
           style="
@@ -407,27 +422,29 @@ async function handleConfirmOtp() {
         "
       >
         <div style="display: flex; justify-content: space-between; font-size: 14px">
-          <span style="color: rgba(247, 244, 237, 0.5)">Xizmat ko'rsatuvchi</span>
-          <span style="font-weight: 600">{{ selectedProvider?.serviceName }}</span>
+          <span style="color: rgba(247, 244, 237, 0.5)">{{ t('utility.provider_label') }}</span>
+          <span style="font-weight: 600">{{
+            selectedProvider ? providerDisplayName(selectedProvider) : ''
+          }}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 14px">
-          <span style="color: rgba(247, 244, 237, 0.5)">Summa</span>
+          <span style="color: rgba(247, 244, 237, 0.5)">{{ t('common.amount') }}</span>
           <span style="font-weight: 600"
-            >{{ completedTransfer.amountUzs.toLocaleString() }} so'm</span
+            >{{ completedTransfer.amountUzs.toLocaleString() }} UZS</span
           >
         </div>
         <div
           v-if="(completedTransfer.feeAmountUzs ?? 0) > 0"
           style="display: flex; justify-content: space-between; font-size: 14px"
         >
-          <span style="color: rgba(247, 244, 237, 0.5)">Komissiya</span>
+          <span style="color: rgba(247, 244, 237, 0.5)">{{ t('common.fee') }}</span>
           <span style="font-weight: 600"
-            >{{ completedTransfer.feeAmountUzs.toLocaleString() }} so'm</span
+            >{{ completedTransfer.feeAmountUzs.toLocaleString() }} UZS</span
           >
         </div>
         <div style="height: 1px; background: rgba(247, 244, 237, 0.08)"></div>
         <div style="display: flex; justify-content: space-between; font-size: 14px">
-          <span style="color: rgba(247, 244, 237, 0.5)">Holat</span>
+          <span style="color: rgba(247, 244, 237, 0.5)">{{ t('common.status') }}</span>
           <span
             style="
               font-weight: 600;
@@ -446,7 +463,7 @@ async function handleConfirmOtp() {
         style="width: 100%; justify-content: center; padding: 14px; margin-top: 4px"
         @click="router.push('/')"
       >
-        Tayyor
+        {{ t('common.done') }}
       </button>
     </div>
 
@@ -480,7 +497,7 @@ async function handleConfirmOtp() {
           <input
             v-model="searchQuery"
             type="search"
-            placeholder="Xizmat qidirish…"
+            :placeholder="t('utility.search_placeholder')"
             style="
               width: 100%;
               height: 46px;
@@ -528,7 +545,7 @@ async function handleConfirmOtp() {
             }"
             @click="activeCategory = null"
           >
-            Barchasi
+            {{ t('transfers.filter_all') }}
           </button>
           <button
             v-for="cat in categories"
@@ -564,7 +581,7 @@ async function handleConfirmOtp() {
             font-size: 14px;
           "
         >
-          Yuklanmoqda...
+          {{ t('common.loading') }}
         </div>
 
         <!-- Empty search result -->
@@ -577,7 +594,7 @@ async function handleConfirmOtp() {
             font-size: 14px;
           "
         >
-          Hech narsa topilmadi
+          {{ t('utility.not_found') }}
         </div>
 
         <!-- Provider grid -->
@@ -711,7 +728,7 @@ async function handleConfirmOtp() {
             </div>
             <div>
               <div style="font-size: 14.5px; font-weight: 700; margin-bottom: 4px">
-                {{ provider.serviceName }}
+                {{ providerDisplayName(provider) }}
               </div>
               <div style="font-size: 12px; color: rgba(247, 244, 237, 0.45)">
                 {{ categoryLabel(provider.category) }}
@@ -776,7 +793,7 @@ async function handleConfirmOtp() {
               margin-bottom: 8px;
             "
           >
-            To'lov kartasi
+            {{ t('utility.payment_card') }}
           </label>
           <select
             v-model="senderCardId"
@@ -794,7 +811,7 @@ async function handleConfirmOtp() {
             "
             :style="fieldErrors.card ? { borderColor: '#ff9c82' } : {}"
           >
-            <option value="" disabled>Kartani tanlang</option>
+            <option value="" disabled>{{ t('common.select_card') }}</option>
             <option v-for="card in verifiedCards" :key="card.id" :value="card.id">
               {{ card.maskedPan }} — {{ card.cardNetwork }}
             </option>
@@ -806,7 +823,7 @@ async function handleConfirmOtp() {
             v-if="verifiedCards.length === 0"
             style="margin: 6px 0 0; font-size: 12.5px; color: rgba(247, 244, 237, 0.4)"
           >
-            Faol karta mavjud emas
+            {{ t('utility.no_active_cards') }}
           </p>
         </div>
 
@@ -821,7 +838,7 @@ async function handleConfirmOtp() {
               margin-bottom: 8px;
             "
           >
-            To'lov summasi (so'm)
+            {{ t('common.amount_uzs') }}
           </label>
           <input
             v-model="amountStr"
@@ -851,24 +868,24 @@ async function handleConfirmOtp() {
             v-if="feeLoading"
             style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.4)"
           >
-            Komissiya hisoblanmoqda...
+            {{ t('common.fee_calculating') }}
           </div>
           <div
             v-else-if="feeAmountUzs !== null && !fieldErrors.amount"
             style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.55)"
           >
-            Komissiya:
-            <strong style="color: #f7f4ed">{{ feeAmountUzs.toLocaleString() }} so'm</strong>
-            &nbsp;·&nbsp; Jami:
+            {{ t('common.fee') }}:
+            <strong style="color: #f7f4ed">{{ feeAmountUzs.toLocaleString() }} UZS</strong>
+            &nbsp;·&nbsp; {{ t('common.total') }}:
             <strong style="color: #f7f4ed"
-              >{{ (amountUzs + feeAmountUzs).toLocaleString() }} so'm</strong
+              >{{ (amountUzs + feeAmountUzs).toLocaleString() }} UZS</strong
             >
           </div>
           <div
             v-else-if="!fieldErrors.amount"
             style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.4)"
           >
-            Komissiya olinishi mumkin
+            {{ t('utility.fee_note') }}
           </div>
         </div>
 
@@ -894,7 +911,7 @@ async function handleConfirmOtp() {
           :disabled="p2sStore.isLoading || verifiedCards.length === 0"
           @click="handleContinue"
         >
-          {{ p2sStore.isLoading ? 'Yuklanmoqda...' : "To'lovni tasdiqlash" }}
+          {{ p2sStore.isLoading ? t('common.loading') : t('utility.confirm_btn') }}
         </button>
       </div>
 
@@ -926,10 +943,10 @@ async function handleConfirmOtp() {
                 margin-bottom: 6px;
               "
             >
-              OTP tasdiqlash
+              {{ t('utility.otp_title') }}
             </div>
             <div style="font-size: 14px; color: rgba(247, 244, 237, 0.55)">
-              Telefoningizga yuborilgan 6 raqamli kodni kiriting
+              {{ t('common.otp_enter') }}
             </div>
           </div>
           <div class="pp-modal-body">
@@ -955,7 +972,7 @@ async function handleConfirmOtp() {
                   color: rgba(247, 244, 237, 0.62);
                   margin-bottom: 8px;
                 "
-                >OTP kod</label
+                >{{ t('common.otp_code') }}</label
               >
               <input
                 v-model="otpCode"
@@ -985,7 +1002,7 @@ async function handleConfirmOtp() {
                 v-if="isDev && otpCode"
                 style="margin: 8px 0 0; font-size: 12px; color: rgba(247, 244, 237, 0.4)"
               >
-                Dev rejim: kod avtomatik to'ldirildi — {{ otpCode }}
+                Dev: auto-filled — {{ otpCode }}
               </p>
             </div>
           </div>
@@ -999,7 +1016,7 @@ async function handleConfirmOtp() {
               :disabled="p2sStore.isLoading"
               @click="handleConfirmOtp"
             >
-              {{ p2sStore.isLoading ? 'Tasdiqlanmoqda...' : 'Tasdiqlash' }}
+              {{ p2sStore.isLoading ? t('common.confirming') : t('common.confirm') }}
             </button>
             <button
               class="pp-modal-close"
@@ -1008,7 +1025,7 @@ async function handleConfirmOtp() {
                 otpError = '';
               "
             >
-              Bekor qilish
+              {{ t('common.cancel') }}
             </button>
           </div>
         </div>

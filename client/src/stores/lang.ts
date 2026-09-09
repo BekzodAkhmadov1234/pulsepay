@@ -24,6 +24,10 @@ export const useLangStore = defineStore('lang', () => {
   function setLang(code: LangCode) {
     lang.value = code;
     localStorage.setItem(LANG_KEY, code);
+    // Sync vue-i18n locale — lazy import avoids circular dep at module-load time
+    import('@/i18n').then(({ i18n }) => {
+      i18n.global.locale.value = code;
+    });
   }
 
   return { lang, setLang };

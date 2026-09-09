@@ -138,7 +138,7 @@ class OtpDomainServiceTest {
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, rawCode, OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
-                .hasMessageContaining("Invalid OTP code");
+                .hasMessageContaining("error.otp.invalid");
 
         verify(otpCodeRepository).incrementAttemptCount(otp.id());
         verify(cooldownRepository, never()).save(any());
@@ -219,7 +219,7 @@ class OtpDomainServiceTest {
 
         assertThatThrownBy(() -> service.verifyCode(USER_ID, "code", OtpPurpose.LOGIN))
                 .isInstanceOf(DomainException.class)
-                .hasMessageContaining("already used");
+                .hasMessageContaining("error.otp.used");
     }
 
     @Test

@@ -13,19 +13,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uz.pulsepay.config.JwtProperties;
-import uz.pulsepay.dto.request.AdminLoginRequest;
-import uz.pulsepay.dto.response.AuthResponse;
 import uz.pulsepay.dto.request.LoginRequest;
-import uz.pulsepay.dto.request.RegisterRequest;
+import uz.pulsepay.dto.request.RegisterConfirmRequest;
+import uz.pulsepay.dto.request.RegisterOtpRequest;
 import uz.pulsepay.dto.request.RequestOtpRequest;
-import uz.pulsepay.dto.response.TokenResponse;
 import uz.pulsepay.dto.request.VerifyOtpRequest;
+import uz.pulsepay.dto.response.AuthResponse;
+import uz.pulsepay.dto.response.TokenResponse;
 import uz.pulsepay.domain.identity.OtpPurpose;
 import uz.pulsepay.domain.identity.User;
 import uz.pulsepay.service.UserAuthService;
 import uz.pulsepay.utils.security.JwtService;
 
-@Tag(name = "Authentication", description = "User registration, login, and OTP-based authentication")
+@Tag(name = "Authentication", description = "Registration, login, and OTP-based authentication")
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -42,44 +42,51 @@ public class AuthController {
         this.jwtProperties   = jwtProperties;
     }
 
-    // ── POST /api/v1/auth/register ─────────────────────────────────────────────
+    // ── POST /api/v1/auth/register/otp ────────────────────────────────────────
 
-    @Operation(summary = "Register a new user account",
-               description = "Creates a new PulsePay account. On success, a JWT access token is returned immediately.")
+    @Operation(summary = "Step 1 of registration — send OTP",
+               description = "Sends a 6-digit OTP to the given phone number. "
+                           + "Creates a pending account if the phone is new. "
+                           + "Returns 409 if the phone is already registered and active.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Account created — JWT returned"),
-            @ApiResponse(responseCode = "400", description = "Validation error"),
-            @ApiResponse(responseCode = "409", description = "Phone number already registered")
+            @ApiResponse(responseCode = "202", description = "OTP dispatched"),
+            @ApiResponse(responseCode = "409", description = "Phone already registered")
     })
-    @PostMapping("/register")
-    public ResponseEntity<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
-        String accessToken = userAuthService.register(request.phoneE164(), request.fullName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(TokenResponse.of(accessToken, jwtProperties.getUserExpirySeconds()));
+    @PostMapping("/register/otp")
+    public ResponseEntity<Void> registerOtp(@Valid @RequestBody RegisterOtpRequest request) {
+        userAuthService.registerOtp(request.phoneE164());
+        return ResponseEntity.accepted().build();
     }
 
-    // ── POST /api/v1/auth/login ────────────────────────────────────────────────
+    // ── POST /api/v1/auth/register/confirm ────────────────────────────────────
 
-    @Operation(summary = "Login by phone number",
-               description = "Authenticates an existing user and returns a JWT access token.")
+    @Operation(summary = "Step 2 of registration — verify OTP and activate account",
+               description = "Verifies the OTP sent to the phone, sets the user's full name, "
+                           + "activates the account, and returns a JWT access token.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login successful — JWT returned"),
-            @ApiResponse(responseCode = "403", description = "Account is inactive"),
-            @ApiResponse(responseCode = "404", description = "Phone number not registered")
+            @ApiResponse(responseCode = "201", description = "Account activated — JWT returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired OTP"),
+            @ApiResponse(responseCode = "404", description = "No pending registration found for this phone")
     })
-    @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        String accessToken = userAuthService.login(request.phoneE164());
-        return ResponseEntity.ok(TokenResponse.of(accessToken, jwtProperties.getUserExpirySeconds()));
+    @PostMapping("/register/confirm")
+    public ResponseEntity<TokenResponse> registerConfirm(
+            @Valid @RequestBody RegisterConfirmRequest request,
+            HttpServletRequest httpRequest) {
+        String ip = httpRequest.getRemoteAddr();
+        String accessToken = userAuthService.registerConfirm(
+                request.phoneE164(), request.code(), request.fullName(),
+                request.resolvedFingerprint(), request.resolvedPlatform(), ip);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(TokenResponse.of(accessToken, jwtProperties.getUserExpirySeconds()));
     }
 
     // ── POST /api/v1/auth/otp ──────────────────────────────────────────────────
 
     @Operation(summary = "Request login OTP",
-               description = "Sends a 6-digit OTP to the registered phone number. Valid for 59 seconds.")
+               description = "Sends a 6-digit OTP to the registered phone. Valid for 59 seconds.")
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "OTP dispatched"),
-            @ApiResponse(responseCode = "404", description = "Phone number not registered")
+            @ApiResponse(responseCode = "404", description = "Phone not registered")
     })
     @PostMapping("/otp")
     public ResponseEntity<Void> requestOtp(@Valid @RequestBody RequestOtpRequest request) {
@@ -91,11 +98,11 @@ public class AuthController {
     // ── POST /api/v1/auth/verify ───────────────────────────────────────────────
 
     @Operation(summary = "Verify OTP and obtain JWT",
-               description = "Validates the OTP and issues a short-lived access token.")
+               description = "Validates the OTP and issues an access token.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OTP accepted — JWT returned"),
             @ApiResponse(responseCode = "400", description = "Invalid or expired OTP"),
-            @ApiResponse(responseCode = "404", description = "Phone number not registered")
+            @ApiResponse(responseCode = "404", description = "Phone not registered")
     })
     @PostMapping("/verify")
     public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request,
@@ -108,5 +115,16 @@ public class AuthController {
         String accessToken = jwtService.generateUserToken(user);
         return ResponseEntity.ok(AuthResponse.of(accessToken, "refresh-token-placeholder", 900,
                 result.requiresBiometricStepUp()));
+    }
+
+    // ── POST /api/v1/auth/login (dev convenience — no OTP) ────────────────────
+
+    @Operation(summary = "Dev-only: login by phone without OTP",
+               description = "Returns a JWT directly. Only for development and testing — "
+                           + "not for production use.")
+    @PostMapping("/login")
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        String accessToken = userAuthService.login(request.phoneE164());
+        return ResponseEntity.ok(TokenResponse.of(accessToken, jwtProperties.getUserExpirySeconds()));
     }
 }

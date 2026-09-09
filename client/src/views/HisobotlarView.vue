@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useCardsStore } from '@/stores/cards';
 import { useTransfersStore } from '@/stores/transfers';
 import type { TransferDto } from '@/lib/api/transfers';
 
+const { t } = useI18n();
 const cardsStore = useCardsStore();
 const transfersStore = useTransfersStore();
 
@@ -123,12 +125,12 @@ function txDayKey(tx: TransferDto) {
 
 function txDayLabel(tx: TransferDto) {
   const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
-  if (!d) return 'Boshqa';
+  if (!d) return t('common.today');
   const today = new Date();
-  if (isSameDay(d, today)) return 'Bugun';
+  if (isSameDay(d, today)) return t('common.today');
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(d, yesterday)) return 'Kecha';
+  if (isSameDay(d, yesterday)) return t('common.yesterday');
   return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
 }
 
@@ -157,9 +159,9 @@ function formatDateTime(iso: string | null | undefined) {
 }
 
 function statusLabel(status: string) {
-  if (status === 'completed') return "Muvaffaqiyatli o'tkazma";
-  if (status === 'failed') return "Muvaffaqiyatsiz o'tkazma";
-  if (status === 'processing') return 'Jarayonda';
+  if (status === 'completed') return t('transfers.status_completed');
+  if (status === 'failed') return t('transfers.status_failed');
+  if (status === 'processing') return t('transfers.status_processing');
   return status;
 }
 
@@ -213,7 +215,7 @@ const groupedTransfers = computed(() => {
   }
   for (const g of groups) {
     const vol = g.items.reduce((s, t) => s + t.amountUzs, 0);
-    g.total = `${g.items.length} ta · aylanma ${formatAmount(vol)} UZS`;
+    g.total = t('transfers.group_total', { count: g.items.length, amount: formatAmount(vol) });
   }
   return groups;
 });
@@ -224,19 +226,19 @@ const typeActive = computed(() => txType.value !== 'all');
 const davrActive = computed(() => !!(appliedFrom.value || appliedTo.value));
 
 const cardsLabel = computed(() => {
-  if (!selectedCardId.value) return 'Kartalar';
+  if (!selectedCardId.value) return t('nav.cards');
   const card = cardsStore.cards.find((c) => c.id === selectedCardId.value);
-  return card ? `···${card.maskedPan?.slice(-4)}` : 'Kartalar';
+  return card ? `···${card.maskedPan?.slice(-4)}` : t('nav.cards');
 });
 
 const typeLabel = computed(() => {
-  if (txType.value === 'credit') return 'Tushumlar';
-  if (txType.value === 'debit') return 'Sarflangan';
-  return 'Operatsiya turi';
+  if (txType.value === 'credit') return t('reports.filter_income');
+  if (txType.value === 'debit') return t('reports.filter_expenses');
+  return t('reports.filter_type');
 });
 
 const davrLabel = computed(() => {
-  if (!appliedFrom.value && !appliedTo.value) return 'Davr';
+  if (!appliedFrom.value && !appliedTo.value) return t('reports.filter_period');
   return `${appliedFrom.value || '…'} – ${appliedTo.value || '…'}`;
 });
 
@@ -260,7 +262,7 @@ const selectedTx = ref<TransferDto | null>(null);
           color: #f7f4ed;
         "
       >
-        Hisobotlar
+        {{ t('reports.title') }}
       </h1>
 
       <!-- ── Search bar ── -->
@@ -295,7 +297,7 @@ const selectedTx = ref<TransferDto | null>(null);
         <input
           v-model="query"
           type="text"
-          placeholder="Qidiruv"
+          :placeholder="t('reports.search_placeholder')"
           style="
             flex: 1;
             min-width: 0;
@@ -332,7 +334,7 @@ const selectedTx = ref<TransferDto | null>(null);
           {{ cardsLabel }}
           <button
             type="button"
-            title="Filtrni olib tashlash"
+            :title="t('reports.remove_filter')"
             style="
               display: flex;
               align-items: center;
@@ -388,7 +390,7 @@ const selectedTx = ref<TransferDto | null>(null);
           "
           @click="toggleCardFilter"
         >
-          Kartalar
+          {{ t('nav.cards') }}
           <svg
             width="15"
             height="15"
@@ -423,7 +425,7 @@ const selectedTx = ref<TransferDto | null>(null);
           {{ typeLabel }}
           <button
             type="button"
-            title="Filtrni olib tashlash"
+            :title="t('reports.remove_filter')"
             style="
               display: flex;
               align-items: center;
@@ -479,7 +481,7 @@ const selectedTx = ref<TransferDto | null>(null);
           "
           @click="toggleType"
         >
-          Operatsiya turi
+          {{ t('reports.filter_type') }}
           <svg
             width="15"
             height="15"
@@ -514,7 +516,7 @@ const selectedTx = ref<TransferDto | null>(null);
           {{ davrLabel }}
           <button
             type="button"
-            title="Filtrni olib tashlash"
+            :title="t('reports.remove_filter')"
             style="
               display: flex;
               align-items: center;
@@ -570,7 +572,7 @@ const selectedTx = ref<TransferDto | null>(null);
           "
           @click="toggleDavr"
         >
-          Davr
+          {{ t('reports.filter_period') }}
           <svg
             width="15"
             height="15"
@@ -608,13 +610,13 @@ const selectedTx = ref<TransferDto | null>(null);
             color: #f7f4ed;
           "
         >
-          Operatsiya turi
+          {{ t('reports.filter_type') }}
         </h3>
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px">
           <button
             v-for="opt in [
-              { label: 'Tushumlar', value: 'credit' as const },
-              { label: 'Sarflangan', value: 'debit' as const },
+              { label: t('reports.filter_income'), value: 'credit' as const },
+              { label: t('reports.filter_expenses'), value: 'debit' as const },
             ]"
             :key="opt.value"
             type="button"
@@ -690,7 +692,7 @@ const selectedTx = ref<TransferDto | null>(null);
             color: #f7f4ed;
           "
         >
-          Kartalar
+          {{ t('nav.cards') }}
         </h3>
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px">
           <!-- All accounts -->
@@ -754,7 +756,7 @@ const selectedTx = ref<TransferDto | null>(null);
                   color: rgba(247, 244, 237, 0.55);
                   margin-top: 3px;
                 "
-                >Barcha hisoblar</span
+                >{{ t('reports.all_accounts') }}</span
               >
             </span>
             <svg
@@ -882,7 +884,7 @@ const selectedTx = ref<TransferDto | null>(null);
             color: #f7f4ed;
           "
         >
-          Davr
+          {{ t('reports.filter_period') }}
         </h3>
 
         <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 18px">
@@ -894,7 +896,7 @@ const selectedTx = ref<TransferDto | null>(null);
                 font-weight: 600;
                 color: rgba(247, 244, 237, 0.62);
               "
-              >Sanadan</label
+              >{{ t('reports.date_from') }}</label
             >
             <div
               style="
@@ -952,7 +954,7 @@ const selectedTx = ref<TransferDto | null>(null);
                 font-weight: 600;
                 color: rgba(247, 244, 237, 0.62);
               "
-              >Sanagacha</label
+              >{{ t('reports.date_to') }}</label
             >
             <div
               style="
@@ -1007,9 +1009,9 @@ const selectedTx = ref<TransferDto | null>(null);
         <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px">
           <button
             v-for="r in [
-              { label: 'Kecha', days: 1 },
-              { label: `O'tgan hafta`, days: 7 },
-              { label: `O'tgan oy`, days: 30 },
+              { label: t('reports.quick_yesterday'), days: 1 },
+              { label: t('reports.quick_week'), days: 7 },
+              { label: t('reports.quick_month'), days: 30 },
             ]"
             :key="r.label"
             type="button"
@@ -1056,7 +1058,7 @@ const selectedTx = ref<TransferDto | null>(null);
             "
             @click="clearDavr"
           >
-            O'chirish
+            {{ t('common.delete') }}
           </button>
           <button
             type="button"
@@ -1074,7 +1076,7 @@ const selectedTx = ref<TransferDto | null>(null);
             "
             @click="applyDavr"
           >
-            Ko'rsatish
+            {{ t('reports.show') }}
           </button>
         </div>
       </div>
@@ -1101,7 +1103,7 @@ const selectedTx = ref<TransferDto | null>(null);
               color: #f7f4ed;
             "
           >
-            Operatsiyalar
+            {{ t('reports.transactions') }}
           </h2>
         </div>
 
@@ -1126,10 +1128,10 @@ const selectedTx = ref<TransferDto | null>(null);
           "
         >
           <div style="font-size: 15px; font-weight: 600; color: #f7f4ed">
-            Operatsiyalar topilmadi
+            {{ t('reports.empty') }}
           </div>
           <div style="font-size: 13.5px; color: rgba(247, 244, 237, 0.5); margin-top: 6px">
-            Qidiruv yoki filtrlarni o'zgartirib ko'ring.
+            {{ t('reports.empty_hint') }}
           </div>
         </div>
 
@@ -1194,7 +1196,9 @@ const selectedTx = ref<TransferDto | null>(null);
                   >
                     {{ (tx.direction === 'credit' ? tx.senderName : tx.recipientName) || '—' }}
                   </div>
-                  <div style="font-size: 13px; color: rgba(247, 244, 237, 0.48)">P2P o'tkazma</div>
+                  <div style="font-size: 13px; color: rgba(247, 244, 237, 0.48)">
+                    {{ t('transfers.type_p2p') }}
+                  </div>
                 </div>
                 <div
                   style="
@@ -1281,28 +1285,28 @@ const selectedTx = ref<TransferDto | null>(null);
         </div>
         <div class="pp-modal-body">
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Jo'natuvchi</span>
+            <span class="pp-modal-label">{{ t('common.sender') }}</span>
             <span class="pp-modal-val">{{ selectedTx.senderName || '—' }}</span>
           </div>
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Qabul qiluvchi</span>
+            <span class="pp-modal-label">{{ t('common.recipient') }}</span>
             <span class="pp-modal-val">{{ selectedTx.recipientName || '—' }}</span>
           </div>
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Komissiya</span>
+            <span class="pp-modal-label">{{ t('common.fee') }}</span>
             <span class="pp-modal-val">{{
               selectedTx.feeAmountUzs ? formatAmount(selectedTx.feeAmountUzs) + ' UZS' : '0 UZS'
             }}</span>
           </div>
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Sana</span>
+            <span class="pp-modal-label">{{ t('common.date') }}</span>
             <span class="pp-modal-val">{{
               formatDateTime(selectedTx.processedAt ?? selectedTx.initiatedAt)
             }}</span>
           </div>
         </div>
         <div class="pp-modal-footer">
-          <button class="pp-modal-close" @click="selectedTx = null">Yopish</button>
+          <button class="pp-modal-close" @click="selectedTx = null">{{ t('common.close') }}</button>
         </div>
       </div>
     </div>

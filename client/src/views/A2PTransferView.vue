@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useCardsStore } from '@/stores/cards';
 import { useA2PTransfersStore } from '@/stores/a2pTransfers';
 import { useAuthStore } from '@/stores/auth';
@@ -10,6 +11,7 @@ import { ApiError } from '@/lib/api/client';
 import type { BankDto } from '@/lib/api/banks';
 import type { TransferDto } from '@/lib/api/transfers';
 
+const { t } = useI18n();
 const router = useRouter();
 const cardsStore = useCardsStore();
 const a2pStore = useA2PTransfersStore();
@@ -92,13 +94,14 @@ onMounted(async () => {
 
 function validate(): boolean {
   fieldErrors.value = {};
-  if (!sourceIban.value.trim()) fieldErrors.value.iban = 'IBAN kiriting';
+  if (!sourceIban.value.trim()) fieldErrors.value.iban = t('validation.iban_required');
   else if (!/^UZ\d{25}$/.test(sourceIban.value.trim()))
-    fieldErrors.value.iban = "To'g'ri IBAN kiriting (UZ + 25 raqam)";
-  if (!sourceBankId.value) fieldErrors.value.bank = 'Bankni tanlang';
-  if (!sourceHolderName.value.trim()) fieldErrors.value.holder = 'Hisob egasining ismini kiriting';
-  if (!destCardId.value) fieldErrors.value.card = 'Manzil kartani tanlang';
-  if (!amountStr.value || amountUzs.value <= 0) fieldErrors.value.amount = 'Miqdorni kiriting';
+    fieldErrors.value.iban = t('validation.iban_invalid');
+  if (!sourceBankId.value) fieldErrors.value.bank = t('validation.bank_required');
+  if (!sourceHolderName.value.trim()) fieldErrors.value.holder = t('validation.holder_required');
+  if (!destCardId.value) fieldErrors.value.card = t('validation.dest_card_required');
+  if (!amountStr.value || amountUzs.value <= 0)
+    fieldErrors.value.amount = t('validation.amount_required');
   return Object.keys(fieldErrors.value).length === 0;
 }
 
@@ -132,8 +135,7 @@ async function handlePull() {
       }
     }
   } catch (err) {
-    sendError.value =
-      err instanceof ApiError ? err.message : "Xato yuz berdi. Qaytadan urinib ko'ring.";
+    sendError.value = err instanceof ApiError ? err.message : t('error.generic_short');
   }
 }
 
@@ -144,7 +146,7 @@ async function handleConfirmOtp() {
     isOtpStep.value = false;
     completedTransfer.value = result;
   } catch (err) {
-    otpError.value = err instanceof ApiError ? err.message : 'OTP tasdiqlanmadi.';
+    otpError.value = err instanceof ApiError ? err.message : t('error.otp_confirm_failed');
   }
 }
 </script>
@@ -210,10 +212,10 @@ async function handleConfirmOtp() {
             margin: 0 0 2px;
           "
         >
-          Bankdan kartaga
+          {{ t('a2p.header') }}
         </h1>
         <p style="font-size: 13px; color: rgba(247, 244, 237, 0.5); margin: 0">
-          Bank hisobidan kartangizga pul o'tkazing
+          {{ t('a2p.title') }}
         </p>
       </div>
     </div>
@@ -267,16 +269,16 @@ async function handleConfirmOtp() {
             margin-bottom: 6px;
           "
         >
-          Karta to'ldirildi
+          {{ t('a2p.success_title') }}
         </div>
         <div style="font-size: 14px; color: rgba(247, 244, 237, 0.55)">
-          {{ completedTransfer.amountUzs.toLocaleString() }} UZS kartangizga o'tkazildi
+          {{ t('a2p.success_desc', { amount: completedTransfer.amountUzs.toLocaleString() }) }}
         </div>
         <div
           v-if="(completedTransfer.feeAmountUzs ?? 0) > 0"
           style="font-size: 13px; color: rgba(247, 244, 237, 0.4); margin-top: 4px"
         >
-          Komissiya: {{ completedTransfer.feeAmountUzs.toLocaleString() }} UZS
+          {{ t('common.fee') }}: {{ completedTransfer.feeAmountUzs.toLocaleString() }} UZS
         </div>
       </div>
       <button
@@ -284,7 +286,7 @@ async function handleConfirmOtp() {
         style="width: 100%; justify-content: center; padding: 14px; margin-top: 8px"
         @click="router.push('/transfers')"
       >
-        Tarixni ko'rish
+        {{ t('common.view_history') }}
       </button>
       <button
         style="
@@ -304,7 +306,7 @@ async function handleConfirmOtp() {
           feeAmountUzs = null;
         "
       >
-        Yangi to'ldirish
+        {{ t('a2p.new_refill') }}
       </button>
     </div>
 
@@ -322,7 +324,7 @@ async function handleConfirmOtp() {
               margin-bottom: 8px;
             "
           >
-            Manba IBAN (bank hisobi)
+            {{ t('a2p.source_iban') }}
           </label>
           <input
             v-model="sourceIban"
@@ -380,7 +382,7 @@ async function handleConfirmOtp() {
             :style="fieldErrors.bank ? { borderColor: '#ff9c82' } : {}"
           >
             <option value="" disabled>
-              {{ banksLoading ? 'Yuklanmoqda...' : 'Bankni tanlang' }}
+              {{ banksLoading ? t('common.loading') : t('bank.select_bank') }}
             </option>
             <option v-for="bank in banks" :key="bank.id" :value="bank.id">
               {{ bank.name }} ({{ bank.mfoCode }})
@@ -402,12 +404,12 @@ async function handleConfirmOtp() {
               margin-bottom: 8px;
             "
           >
-            Hisob egasining ismi
+            {{ t('bank.account_holder') }}
           </label>
           <input
             v-model="sourceHolderName"
             type="text"
-            placeholder="Ismi Familiyasi"
+            :placeholder="t('bank.holder_placeholder')"
             style="
               width: 100%;
               height: 54px;
@@ -438,7 +440,7 @@ async function handleConfirmOtp() {
               margin-bottom: 8px;
             "
           >
-            Manzil karta (to'ldiriladi)
+            {{ t('a2p.dest_card') }}
           </label>
           <select
             v-model="destCardId"
@@ -456,7 +458,7 @@ async function handleConfirmOtp() {
             "
             :style="fieldErrors.card ? { borderColor: '#ff9c82' } : {}"
           >
-            <option value="" disabled>Kartani tanlang</option>
+            <option value="" disabled>{{ t('common.select_card') }}</option>
             <option v-for="card in verifiedCards" :key="card.id" :value="card.id">
               {{ card.maskedPan }} — {{ card.cardNetwork }}
             </option>
@@ -468,7 +470,7 @@ async function handleConfirmOtp() {
             v-if="verifiedCards.length === 0"
             style="margin: 6px 0 0; font-size: 12.5px; color: rgba(247, 244, 237, 0.4)"
           >
-            Tasdiqlangan karta yo'q
+            {{ t('common.no_verified_cards') }}
           </p>
         </div>
 
@@ -483,7 +485,7 @@ async function handleConfirmOtp() {
               margin-bottom: 8px;
             "
           >
-            Miqdor (UZS)
+            {{ t('common.amount_uzs') }}
           </label>
           <input
             v-model="amountStr"
@@ -513,15 +515,15 @@ async function handleConfirmOtp() {
             v-if="feeLoading"
             style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.4)"
           >
-            Komissiya hisoblanmoqda...
+            {{ t('common.fee_calculating') }}
           </div>
           <div
             v-else-if="feeAmountUzs !== null && !fieldErrors.amount"
             style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.55)"
           >
-            Komissiya:
+            {{ t('common.fee') }}:
             <strong style="color: #f7f4ed">{{ feeAmountUzs.toLocaleString() }} UZS</strong>
-            &nbsp;·&nbsp; Bank debeti:
+            &nbsp;·&nbsp; {{ t('common.total') }}:
             <strong style="color: #f7f4ed"
               >{{ (amountUzs + feeAmountUzs).toLocaleString() }} UZS</strong
             >
@@ -530,7 +532,7 @@ async function handleConfirmOtp() {
             v-else-if="!fieldErrors.amount"
             style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.4)"
           >
-            Komissiya qo'llanilishi mumkin (0.5%, min 2 000 UZS)
+            {{ t('a2p.fee_note') }}
           </div>
         </div>
 
@@ -556,7 +558,7 @@ async function handleConfirmOtp() {
           :disabled="a2pStore.isLoading || verifiedCards.length === 0"
           @click="handlePull"
         >
-          {{ a2pStore.isLoading ? 'Yuklanmoqda...' : 'Davom etish' }}
+          {{ a2pStore.isLoading ? t('common.loading') : t('common.continue') }}
         </button>
       </div>
 
@@ -588,10 +590,10 @@ async function handleConfirmOtp() {
                 margin-bottom: 6px;
               "
             >
-              OTP tasdiqlash
+              {{ t('utility.otp_title') }}
             </div>
             <div style="font-size: 14px; color: rgba(247, 244, 237, 0.55)">
-              Telefoningizga yuborilgan 6 raqamli kodni kiriting
+              {{ t('common.otp_enter') }}
             </div>
           </div>
           <div class="pp-modal-body">
@@ -617,7 +619,7 @@ async function handleConfirmOtp() {
                   color: rgba(247, 244, 237, 0.62);
                   margin-bottom: 8px;
                 "
-                >OTP kod</label
+                >{{ t('common.otp_code') }}</label
               >
               <input
                 v-model="otpCode"
@@ -647,7 +649,7 @@ async function handleConfirmOtp() {
                 v-if="isDev && otpCode"
                 style="margin: 8px 0 0; font-size: 12px; color: rgba(247, 244, 237, 0.4)"
               >
-                Dev: kod avtomatik to'ldirildi — {{ otpCode }}
+                Dev: auto-filled — {{ otpCode }}
               </p>
             </div>
           </div>
@@ -661,7 +663,7 @@ async function handleConfirmOtp() {
               :disabled="a2pStore.isLoading"
               @click="handleConfirmOtp"
             >
-              {{ a2pStore.isLoading ? 'Tasdiqlanmoqda...' : 'Tasdiqlash' }}
+              {{ a2pStore.isLoading ? t('common.confirming') : t('common.confirm') }}
             </button>
             <button
               class="pp-modal-close"
@@ -670,7 +672,7 @@ async function handleConfirmOtp() {
                 otpError = '';
               "
             >
-              Bekor qilish
+              {{ t('common.cancel') }}
             </button>
           </div>
         </div>

@@ -72,6 +72,11 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/exchange-rates',
+      name: 'exchange-rates',
+      component: () => import('../views/ExchangeRatesView.vue'),
+    },
+    {
       path: '/admin/login',
       name: 'admin-login',
       component: () => import('../views/admin/AdminLoginView.vue'),

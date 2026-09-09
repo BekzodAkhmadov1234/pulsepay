@@ -16,6 +16,6 @@ public record VerifyOtpRequest(
         @Schema(description = "Stable device identifier used for new-device detection (AUTH-01)")
         @NotBlank String deviceFingerprint,
 
-        @Schema(description = "Client platform", allowableValues = {"ios", "android"}, example = "android")
-        @NotBlank @Pattern(regexp = "ios|android") String platform
+        @Schema(description = "Client platform", allowableValues = {"ios", "android", "web"}, example = "web")
+        @NotBlank @Pattern(regexp = "ios|android|web") String platform
 ) {}

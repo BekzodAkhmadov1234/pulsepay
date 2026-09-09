@@ -5,8 +5,23 @@ import {
   addCard as apiAddCard,
   removeCard as apiRemoveCard,
   setDefaultCard as apiSetDefaultCard,
+  blockCard as apiBlockCard,
+  unblockCard as apiUnblockCard,
+  getCardStatement as apiGetStatement,
+  getLimitTypes as apiGetLimitTypes,
+  getCardLimits as apiGetLimits,
+  setCardLimits as apiSetLimits,
+  removeCardLimit as apiRemoveLimit,
+  setCardPin as apiSetPin,
 } from '@/lib/api/cards';
-import type { CardDto, AddCardPayload } from '@/lib/api/cards';
+import type {
+  CardDto,
+  AddCardPayload,
+  StatementEntry,
+  LimitTypeDto,
+  CardLimitDto,
+  LimitInput,
+} from '@/lib/api/cards';
 
 export const useCardsStore = defineStore('cards', () => {
   const cards = ref<CardDto[]>([]);
@@ -47,5 +62,59 @@ export const useCardsStore = defineStore('cards', () => {
     cards.value = cards.value.map((c) => (c.id === cardId ? updated : { ...c, isDefault: false }));
   }
 
-  return { cards, isLoading, fetchCards, addCard, removeCard, setDefault };
+  function _replaceCard(updated: CardDto) {
+    cards.value = cards.value.map((c) => (c.id === updated.id ? updated : c));
+  }
+
+  async function blockCard(cardId: string): Promise<void> {
+    _replaceCard(await apiBlockCard(cardId));
+  }
+
+  async function unblockCard(cardId: string): Promise<void> {
+    _replaceCard(await apiUnblockCard(cardId));
+  }
+
+  async function fetchStatement(
+    cardId: string,
+    params?: { startDate?: string; endDate?: string }
+  ): Promise<StatementEntry[]> {
+    return apiGetStatement(cardId, params);
+  }
+
+  async function fetchLimitTypes(): Promise<LimitTypeDto[]> {
+    return apiGetLimitTypes();
+  }
+
+  async function fetchLimits(cardId: string): Promise<CardLimitDto[]> {
+    return apiGetLimits(cardId);
+  }
+
+  async function saveLimits(cardId: string, limits: LimitInput[]): Promise<CardLimitDto[]> {
+    return apiSetLimits(cardId, limits);
+  }
+
+  async function deleteLimit(cardId: string, limitType: string): Promise<void> {
+    return apiRemoveLimit(cardId, limitType);
+  }
+
+  async function changePin(cardId: string, network: 'humo' | 'uzcard', pin: string): Promise<void> {
+    return apiSetPin(cardId, network, pin);
+  }
+
+  return {
+    cards,
+    isLoading,
+    fetchCards,
+    addCard,
+    removeCard,
+    setDefault,
+    blockCard,
+    unblockCard,
+    fetchStatement,
+    fetchLimitTypes,
+    fetchLimits,
+    saveLimits,
+    deleteLimit,
+    changePin,
+  };
 });

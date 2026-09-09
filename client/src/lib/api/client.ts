@@ -20,6 +20,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'X-Lang': getLang(),
+    'ngrok-skip-browser-warning': 'true',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   };

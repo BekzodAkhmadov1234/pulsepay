@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useCardsStore } from '@/stores/cards';
 import { useTransfersStore } from '@/stores/transfers';
 import { useAuthStore } from '@/stores/auth';
@@ -13,6 +14,7 @@ const cardsStore = useCardsStore();
 const transfersStore = useTransfersStore();
 const authStore = useAuthStore();
 const router = useRouter();
+const { t } = useI18n();
 const isDev = import.meta.env.DEV;
 
 // ── View state ────────────────────────────────────────────────
@@ -98,8 +100,8 @@ async function handleSearch() {
   } catch (err) {
     lookupError.value =
       err instanceof ApiError && err.status === 404
-        ? 'Foydalanuvchi topilmadi.'
-        : "Qidiruv muvaffaqiyatsiz. Qayta urinib ko'ring.";
+        ? t('error.user_not_found')
+        : t('error.search_failed');
   } finally {
     isLooking.value = false;
   }
@@ -149,11 +151,12 @@ const otpError = ref('');
 
 function validate(): boolean {
   fieldErrors.value = {};
-  if (!senderCardId.value) fieldErrors.value.senderCard = 'Kartangizni tanlang.';
-  if (!recipientCardId.value) fieldErrors.value.recipientCard = 'Qabul qiluvchi kartasini tanlang.';
+  if (!senderCardId.value) fieldErrors.value.senderCard = t('validation.card_required');
+  if (!recipientCardId.value)
+    fieldErrors.value.recipientCard = t('validation.recipient_card_required');
   if (!amountUzs.value || amountUzs.value <= 0)
-    fieldErrors.value.amount = "To'g'ri summani kiriting.";
-  else if (amountUzs.value > 30_000_000) fieldErrors.value.amount = 'Maksimum 30 000 000 UZS.';
+    fieldErrors.value.amount = t('validation.amount_invalid');
+  else if (amountUzs.value > 30_000_000) fieldErrors.value.amount = t('validation.amount_max');
   return Object.keys(fieldErrors.value).length === 0;
 }
 
@@ -185,7 +188,7 @@ async function handleSend() {
       }
     }
   } catch (err) {
-    sendError.value = err instanceof ApiError ? err.message : "O'tkazma muvaffaqiyatsiz.";
+    sendError.value = err instanceof ApiError ? err.message : t('error.generic_short');
   }
 }
 
@@ -195,7 +198,7 @@ async function handleConfirmOtp() {
     await transfersStore.confirmOtp(pendingTransferId.value, otpCode.value);
     router.push('/');
   } catch (err) {
-    otpError.value = err instanceof ApiError ? err.message : 'OTP tasdiqlanmadi.';
+    otpError.value = err instanceof ApiError ? err.message : t('error.otp_confirm_failed');
   }
 }
 
@@ -260,7 +263,7 @@ async function confirmBetween() {
   betweenNoteOk.value = false;
   const v = parseInt(betweenAmount.value.replace(/,/g, ''), 10);
   if (!v) {
-    betweenNote.value = 'Summani kiriting.';
+    betweenNote.value = t('validation.amount_required');
     return;
   }
   if (same.value || !authStore.user?.id) return;
@@ -292,7 +295,7 @@ async function confirmBetween() {
       }
     }
   } catch (err) {
-    betweenNote.value = err instanceof ApiError ? err.message : "O'tkazma muvaffaqiyatsiz.";
+    betweenNote.value = err instanceof ApiError ? err.message : t('error.generic_short');
   }
 }
 
@@ -332,8 +335,8 @@ const contactGroups = computed(() => {
   const starred = recentContacts.value.filter((c) => starredNames.value.has(c.name));
   const recent = recentContacts.value.filter((c) => !starredNames.value.has(c.name));
   const groups = [];
-  if (starred.length) groups.push({ title: "Saralangan o'tkazmalar", contacts: starred });
-  if (recent.length) groups.push({ title: "Oxirgi o'tkazmalar", contacts: recent });
+  if (starred.length) groups.push({ title: t('send.starred'), contacts: starred });
+  if (recent.length) groups.push({ title: t('send.recent'), contacts: recent });
   return groups;
 });
 
@@ -407,10 +410,10 @@ function onAmountInput(e: Event) {
                 margin-bottom: 6px;
               "
             >
-              OTP tasdiqlash
+              {{ t('send.otp_title') }}
             </div>
             <div style="font-size: 14px; color: rgba(247, 244, 237, 0.55)">
-              Telefoningizga yuborilgan 6 raqamli kodni kiriting
+              {{ t('common.otp_enter') }}
             </div>
           </div>
           <div class="pp-modal-body">
@@ -436,7 +439,7 @@ function onAmountInput(e: Event) {
                   color: rgba(247, 244, 237, 0.62);
                   margin-bottom: 8px;
                 "
-                >OTP kod</label
+                >{{ t('common.otp_code') }}</label
               >
               <input
                 v-model="otpCode"
@@ -467,7 +470,7 @@ function onAmountInput(e: Event) {
                 v-if="isDev && otpCode"
                 style="margin: 8px 0 0; font-size: 12px; color: rgba(247, 244, 237, 0.4)"
               >
-                Dev: kod avtomatik to'ldirildi — {{ otpCode }}
+                Dev: auto-filled — {{ otpCode }}
               </p>
             </div>
           </div>
@@ -481,7 +484,7 @@ function onAmountInput(e: Event) {
               :disabled="transfersStore.isLoading"
               @click="handleConfirmOtp"
             >
-              {{ transfersStore.isLoading ? 'Tasdiqlanmoqda...' : 'Tasdiqlash' }}
+              {{ transfersStore.isLoading ? t('common.confirming') : t('common.confirm') }}
             </button>
             <button
               class="pp-modal-close"
@@ -490,7 +493,7 @@ function onAmountInput(e: Event) {
                 otpError = '';
               "
             >
-              Bekor qilish
+              {{ t('common.cancel') }}
             </button>
           </div>
         </div>
@@ -501,7 +504,7 @@ function onAmountInput(e: Event) {
         <div style="display: flex; align-items: center; gap: 14px">
           <button
             type="button"
-            title="Orqaga"
+            :title="t('send.back')"
             style="
               display: flex;
               align-items: center;
@@ -546,7 +549,7 @@ function onAmountInput(e: Event) {
               color: #f7f4ed;
             "
           >
-            Kartalarim orasida o'tkazma
+            {{ t('send.between_title') }}
           </h1>
         </div>
 
@@ -563,8 +566,8 @@ function onAmountInput(e: Event) {
             color: #ff9c82;
           "
         >
-          Kamida 2 ta tasdiqlangan karta bo'lishi kerak.
-          <RouterLink to="/cards" style="color: #29be8c">Karta qo'shish →</RouterLink>
+          {{ t('send.min_2_cards') }}
+          <RouterLink to="/cards" style="color: #29be8c">{{ t('cards.add_card') }} →</RouterLink>
         </div>
 
         <template v-else>
@@ -578,7 +581,7 @@ function onAmountInput(e: Event) {
                 color: rgba(247, 244, 237, 0.45);
               "
             >
-              Kartadan
+              {{ t('send.from_card') }}
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px">
               <button
@@ -629,7 +632,7 @@ function onAmountInput(e: Event) {
             <div style="display: flex; justify-content: center; margin: 16px 0">
               <button
                 type="button"
-                title="O'rnini almashtirish"
+                :title="t('send.swap_title')"
                 style="
                   display: flex;
                   align-items: center;
@@ -675,7 +678,7 @@ function onAmountInput(e: Event) {
                 color: rgba(247, 244, 237, 0.45);
               "
             >
-              Kartaga
+              {{ t('send.to_card') }}
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px">
               <button
@@ -739,7 +742,7 @@ function onAmountInput(e: Event) {
                 font-weight: 600;
                 color: rgba(247, 244, 237, 0.62);
               "
-              >Summani kiriting</label
+              >{{ t('send.enter_amount') }}</label
             >
             <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px">
               <div
@@ -803,12 +806,12 @@ function onAmountInput(e: Event) {
                   "
                   @click="fillAllMoney"
                 >
-                  Hamma pulni
+                  {{ t('send.all_money') }}
                 </button>
               </div>
               <button
                 type="button"
-                title="Davom etish"
+                :title="t('common.continue')"
                 :disabled="same || transfersStore.isLoading"
                 style="
                   display: flex;
@@ -862,7 +865,7 @@ function onAmountInput(e: Event) {
               "
             >
               <div style="color: rgba(247, 244, 237, 0.55)">
-                Komissiya:
+                {{ t('common.fee') }}:
                 <strong style="color: #f7f4ed; font-weight: 600"
                   >{{ betweenFeeUzs.toLocaleString('en-US') }} UZS</strong
                 >
@@ -884,11 +887,7 @@ function onAmountInput(e: Event) {
                     : 'rgba(247,244,237,0.45)',
               }"
             >
-              {{
-                same
-                  ? "Xuddi shu kartaga o'tkazish mumkin emas"
-                  : betweenNote || "Komissiya qo'llanilishi mumkin"
-              }}
+              {{ same ? t('send.same_card_error') : betweenNote || t('send.fee_may_apply') }}
             </div>
           </div>
         </template>
@@ -915,7 +914,7 @@ function onAmountInput(e: Event) {
             color: #f7f4ed;
           "
         >
-          O'tkazma
+          {{ t('send.title') }}
         </h1>
         <p
           style="
@@ -925,7 +924,7 @@ function onAmountInput(e: Event) {
             margin: 10px 0 0;
           "
         >
-          Qabul qiluvchining telefon yoki karta raqamini kiriting
+          {{ t('send.search_placeholder') }}
         </p>
 
         <!-- Search bar -->
@@ -975,7 +974,7 @@ function onAmountInput(e: Event) {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Telefon (+998XX) yoki karta raqami"
+            :placeholder="t('send.search_placeholder')"
             style="
               flex: 1;
               min-width: 0;
@@ -1110,11 +1109,12 @@ function onAmountInput(e: Event) {
                 margin-bottom: 10px;
               "
             >
-              Sizning kartangiz
+              {{ t('send.your_card') }}
             </div>
             <div v-if="verifiedCards.length === 0" style="font-size: 13.5px; color: #ff9c82">
-              Tasdiqlangan kartalar yo'q —
-              <RouterLink to="/cards" style="color: #29be8c">karta qo'shing</RouterLink>.
+              {{ t('common.no_verified_cards') }} —
+              <RouterLink to="/cards" style="color: #29be8c">{{ t('cards.add_card') }}</RouterLink
+              >.
             </div>
             <div v-else style="display: flex; flex-wrap: wrap; gap: 8px">
               <button
@@ -1186,7 +1186,7 @@ function onAmountInput(e: Event) {
                 margin-bottom: 10px;
               "
             >
-              Qabul qiluvchi kartasi
+              {{ t('send.recipient_card') }}
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px">
               <button
@@ -1226,7 +1226,8 @@ function onAmountInput(e: Event) {
                     color: rgba(247, 244, 237, 0.6);
                   "
                 >
-                  {{ networkLabel(card.cardNetwork) }}{{ card.isDefault ? ' · Asosiy' : '' }}
+                  {{ networkLabel(card.cardNetwork)
+                  }}{{ card.isDefault ? ' · ' + t('cards.set_default') : '' }}
                 </div>
                 <div
                   style="
@@ -1264,7 +1265,7 @@ function onAmountInput(e: Event) {
                 color: rgba(247, 244, 237, 0.62);
                 margin-bottom: 10px;
               "
-              >Summani kiriting</label
+              >{{ t('send.enter_amount') }}</label
             >
             <div style="display: flex; align-items: center; gap: 10px">
               <div
@@ -1373,7 +1374,7 @@ function onAmountInput(e: Event) {
               "
             >
               <div style="color: rgba(247, 244, 237, 0.55)">
-                Komissiya:
+                {{ t('common.fee') }}:
                 <strong style="color: #f7f4ed; font-weight: 600"
                   >{{ p2pFeeUzs.toLocaleString('en-US') }} UZS</strong
                 >
@@ -1386,7 +1387,7 @@ function onAmountInput(e: Event) {
               v-else-if="!fieldErrors.amount && !sendError"
               style="margin-top: 8px; font-size: 13px; color: rgba(247, 244, 237, 0.4)"
             >
-              Komissiya qo'llanilishi mumkin
+              {{ t('send.fee_may_apply') }}
             </div>
           </div>
         </div>
@@ -1441,9 +1442,9 @@ function onAmountInput(e: Event) {
               <path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5"></path>
             </svg>
           </span>
-          <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600"
-            >Kartalarim orasida</span
-          >
+          <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600">{{
+            t('send.between_shortcut')
+          }}</span>
           <svg
             width="17"
             height="17"
@@ -1510,9 +1511,9 @@ function onAmountInput(e: Event) {
               <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
             </svg>
           </span>
-          <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600"
-            >Bank hisobiga o'tkazma</span
-          >
+          <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600">{{
+            t('send.bank_shortcut')
+          }}</span>
           <svg
             width="17"
             height="17"
@@ -1580,7 +1581,9 @@ function onAmountInput(e: Event) {
             </svg>
           </span>
           <span style="flex: 1; min-width: 0">
-            <span style="display: block; font-size: 15.5px; font-weight: 600">Bankdan kartaga</span>
+            <span style="display: block; font-size: 15.5px; font-weight: 600">{{
+              t('send.a2p_shortcut')
+            }}</span>
             <span
               style="
                 display: block;
@@ -1588,7 +1591,7 @@ function onAmountInput(e: Event) {
                 color: rgba(247, 244, 237, 0.5);
                 margin-top: 2px;
               "
-              >Bank hisobidan pul o'tkazing</span
+              >{{ t('send.a2p_shortcut_desc') }}</span
             >
           </span>
           <svg
@@ -1678,7 +1681,7 @@ function onAmountInput(e: Event) {
                 </div>
                 <button
                   type="button"
-                  title="Saralanganga qo'shish"
+                  :title="t('send.add_starred')"
                   style="
                     display: flex;
                     align-items: center;
@@ -1723,7 +1726,7 @@ function onAmountInput(e: Event) {
           style="width: 100%; max-width: 640px; margin-top: 34px; text-align: left"
         >
           <p style="font-size: 13.5px; color: rgba(247, 244, 237, 0.4); text-align: center">
-            O'tkazma tarixi bu yerda ko'rinadi
+            {{ t('send.history_empty') }}
           </p>
         </div>
       </section>

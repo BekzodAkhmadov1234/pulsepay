@@ -111,3 +111,7 @@ databaseChangeLog:
   # Stage 8 — i18n: language preference per device
   - include:
       file: db/changelog/changes/stage-8/501-device-lang.yaml
+
+  # Stage 11 — OTP-based registration and account self-deletion
+  - include:
+      file: db/changelog/changes/stage-11/601-registration-account-delete.yaml

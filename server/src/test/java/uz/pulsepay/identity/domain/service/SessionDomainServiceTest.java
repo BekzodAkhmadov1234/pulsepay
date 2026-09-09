@@ -119,7 +119,7 @@ class SessionDomainServiceTest {
 
     private static DeviceEntity deviceEntity(UUID id, boolean trusted) {
         Device d = new Device(id, USER_ID, FINGERPRINT, "android", null,
-                Instant.now(), Instant.now(), trusted);
+                "ru", Instant.now(), Instant.now(), trusted);
         return DeviceEntity.fromDomain(d);
     }
 }

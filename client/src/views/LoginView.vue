@@ -1,14 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { useLangStore, LANG_OPTIONS } from '@/stores/lang';
+
+const { t } = useI18n();
 import { useAuthStore } from '@/stores/auth';
 import { ApiError } from '@/lib/api/client';
-import { register as apiRegister, requestOtp, getDevOtp, verifyOtp } from '@/lib/api/auth';
+import { registerOtp, registerConfirm, requestOtp, getDevOtp, verifyOtp } from '@/lib/api/auth';
 import { setToken } from '@/lib/token';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const lang = useLangStore();
+const langOpen = ref(false);
+
+function currentLangLabel() {
+  return LANG_OPTIONS.find((o) => o.code === lang.lang)?.label ?? 'UZ';
+}
+
+function selectLang(code: (typeof LANG_OPTIONS)[0]['code']) {
+  lang.setLang(code);
+  langOpen.value = false;
+}
 
 // ── Step management ────────────────────────────────────────────────────
 const step = ref<'phone' | 'otp'>('phone');
@@ -55,13 +70,13 @@ const isLoading = ref(false);
 
 // ── Computed text ──────────────────────────────────────────────────────
 const heading = computed(() => {
-  if (step.value === 'otp') return 'Kodni kiriting';
-  return mode.value === 'login' ? 'Xush kelibsiz' : 'Hisobingizni yarating';
+  if (step.value === 'otp') return t('auth.enter_code');
+  return mode.value === 'login' ? t('auth.welcome') : t('auth.create_account');
 });
 const subheading = computed(() => {
-  if (step.value === 'otp') return 'Telefoningizga yuborilgan 6 xonali kodni kiriting.';
+  if (step.value === 'otp') return t('auth.otp_hint');
   if (mode.value === 'register') return '';
-  return 'Telefon raqamingiz orqali hisobingizga kiring.';
+  return t('auth.login_hint');
 });
 
 // ── Mode switcher ──────────────────────────────────────────────────────
@@ -151,20 +166,20 @@ async function submitPhone() {
   error.value = '';
 
   if (phoneDigits.value.length < 9) {
-    error.value = "Telefon raqamini to'liq kiriting (9 raqam).";
+    error.value = t('validation.phone_required');
     return;
   }
   if (mode.value === 'register') {
     if (firstName.value.trim().length < 2) {
-      error.value = "Ismni to'liq kiriting (kamida 2 belgi).";
+      error.value = t('validation.first_name_min');
       return;
     }
     if (lastName.value.trim().length < 2) {
-      error.value = "Familiyani to'liq kiriting (kamida 2 belgi).";
+      error.value = t('validation.last_name_min');
       return;
     }
     if (!agreed.value) {
-      error.value = 'Davom etish uchun shartlarga rozilik bildiring.';
+      error.value = t('validation.terms_required');
       return;
     }
   }
@@ -174,12 +189,10 @@ async function submitPhone() {
 
   try {
     if (mode.value === 'register') {
-      await apiRegister({
-        phoneE164,
-        fullName: `${firstName.value.trim()} ${lastName.value.trim()}`,
-      });
+      await registerOtp(phoneE164);
+    } else {
+      await requestOtp(phoneE164);
     }
-    await requestOtp(phoneE164);
     step.value = 'otp';
     startResendTimer();
     nextTick(() => otpBoxRefs.value[0]?.focus());
@@ -187,14 +200,14 @@ async function submitPhone() {
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 409) {
-        error.value = "Bu telefon raqami allaqachon ro'yxatdan o'tgan.";
+        error.value = t('error.phone_registered');
       } else if (err.status === 404) {
-        error.value = "Bu raqam ro'yxatdan o'tmagan. Avval ro'yxatdan o'ting.";
+        error.value = t('error.phone_not_found');
       } else {
         error.value = err.message;
       }
     } else {
-      error.value = "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.";
+      error.value = t('common.error_generic');
     }
   } finally {
     isLoading.value = false;
@@ -211,7 +224,11 @@ async function submitOtp() {
   const phoneE164 = '+998' + phoneDigits.value;
 
   try {
-    const res = await verifyOtp(phoneE164, code);
+    const fullName = `${firstName.value.trim()} ${lastName.value.trim()}`;
+    const res =
+      mode.value === 'register'
+        ? await registerConfirm(phoneE164, code, fullName)
+        : await verifyOtp(phoneE164, code);
     setToken(res.accessToken);
     auth.fetchCurrentUser();
     const redirect = route.query.redirect as string | undefined;
@@ -220,9 +237,9 @@ async function submitOtp() {
     otpDigits.value = ['', '', '', '', '', ''];
     nextTick(() => otpBoxRefs.value[0]?.focus());
     if (err instanceof ApiError) {
-      error.value = err.status === 400 ? "Kod noto'g'ri yoki muddati o'tgan." : err.message;
+      error.value = err.status === 400 ? t('error.otp_invalid') : err.message;
     } else {
-      error.value = "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.";
+      error.value = t('common.error_generic');
     }
   } finally {
     isLoading.value = false;
@@ -254,20 +271,51 @@ async function submitOtp() {
         </div>
         <span>Pulse<span style="color: #29be8c">Pay</span></span>
       </div>
-      <div class="auth-badge">
-        <svg
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#29BE8C"
-          stroke-width="2.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6z"></path>
-        </svg>
-        MBU litsenziyalangan
+      <div style="display: flex; align-items: center; gap: 10px; flex: none">
+        <!-- Language dropdown -->
+        <div class="auth-lang-dropdown">
+          <button class="auth-lang-toggle" @click="langOpen = !langOpen">
+            {{ currentLangLabel() }}
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="rgba(247,244,237,0.6)"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button>
+          <div v-if="langOpen" class="auth-lang-menu">
+            <button
+              v-for="opt in LANG_OPTIONS"
+              :key="opt.code"
+              class="auth-lang-menu-item"
+              :class="{ active: lang.lang === opt.code }"
+              @click="selectLang(opt.code)"
+            >
+              {{ opt.display }}
+            </button>
+          </div>
+        </div>
+        <div class="auth-badge">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#29BE8C"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6z"></path>
+          </svg>
+          {{ t('auth.licensed') }}
+        </div>
       </div>
     </header>
 
@@ -291,21 +339,21 @@ async function submitOtp() {
                 :class="{ active: mode === 'login' }"
                 @click="switchMode('login')"
               >
-                Kirish
+                {{ t('auth.login_tab') }}
               </button>
               <button
                 class="auth-tab"
                 :class="{ active: mode === 'register' }"
                 @click="switchMode('register')"
               >
-                Ro'yxatdan o'tish
+                {{ t('auth.register_tab') }}
               </button>
             </div>
 
             <!-- Register: name fields -->
             <div v-if="mode === 'register'" class="auth-name-grid">
               <div>
-                <label class="auth-label">Ism</label>
+                <label class="auth-label">{{ t('auth.first_name') }}</label>
                 <input
                   v-model="firstName"
                   type="text"
@@ -316,7 +364,7 @@ async function submitOtp() {
                 />
               </div>
               <div>
-                <label class="auth-label">Familiya</label>
+                <label class="auth-label">{{ t('auth.last_name') }}</label>
                 <input
                   v-model="lastName"
                   type="text"
@@ -329,9 +377,9 @@ async function submitOtp() {
             </div>
 
             <!-- Phone input -->
-            <label class="auth-label" style="display: block; margin-top: 20px"
-              >Telefon raqami</label
-            >
+            <label class="auth-label" style="display: block; margin-top: 20px">{{
+              t('auth.phone')
+            }}</label>
             <div class="auth-phone-wrap">
               <span class="auth-phone-prefix">+998</span>
               <span class="auth-phone-sep"></span>
@@ -360,7 +408,7 @@ async function submitOtp() {
                   margin: 2px 0 0;
                 "
               />
-              <span>Ommaviy oferta va maxfiylik siyosatiga roziman.</span>
+              <span>{{ t('auth.terms_agree') }}</span>
             </label>
 
             <!-- Error -->
@@ -369,10 +417,12 @@ async function submitOtp() {
             <!-- Submit -->
             <button class="auth-submit" :disabled="isLoading" @click="submitPhone">
               <span v-if="isLoading" class="auth-spinner-inline"></span>
-              <span v-else>{{ mode === 'login' ? 'KIRISH' : 'HISOB YARATISH' }}</span>
+              <span v-else>{{
+                mode === 'login' ? t('auth.login_btn') : t('auth.register_btn')
+              }}</span>
             </button>
 
-            <div class="auth-hint">SMS orqali tasdiqlash kodi yuboriladi</div>
+            <div class="auth-hint">{{ t('auth.sms_hint') }}</div>
           </template>
 
           <!-- ── OTP STEP ───────────────────────────────────────── -->
@@ -391,12 +441,12 @@ async function submitOtp() {
               >
                 <path d="M19 12H5m0 0 6-6m-6 6 6 6" />
               </svg>
-              Raqamni o'zgartirish
+              {{ t('auth.change_phone') }}
             </button>
 
             <!-- Phone display -->
             <div class="auth-otp-sent">
-              Kod yuborildi: <strong>+998 {{ formattedPhone }}</strong>
+              {{ t('auth.code_sent') }} <strong>+998 {{ formattedPhone }}</strong>
             </div>
 
             <!-- OTP boxes -->
@@ -429,18 +479,22 @@ async function submitOtp() {
               @click="submitOtp"
             >
               <span v-if="isLoading" class="auth-spinner-inline"></span>
-              <span v-else>TASDIQLASH</span>
+              <span v-else>{{ t('auth.verify_btn') }}</span>
             </button>
 
             <div class="auth-hint">
               <template v-if="resendSeconds > 0">
-                Kodni qayta yuborish — 00:{{ String(resendSeconds).padStart(2, '0') }}
+                {{
+                  t('auth.resend_countdown', {
+                    time: '00:' + String(resendSeconds).padStart(2, '0'),
+                  })
+                }}
               </template>
               <template v-else>
-                Kod kelmadimi?
-                <span style="color: #29be8c; cursor: pointer" @click="fetchAndFillOtp"
-                  >Qayta yuborish</span
-                >
+                {{ t('auth.no_code') }}
+                <span style="color: #29be8c; cursor: pointer" @click="fetchAndFillOtp">{{
+                  t('auth.resend')
+                }}</span>
               </template>
             </div>
           </template>
@@ -448,7 +502,7 @@ async function submitOtp() {
       </div>
     </main>
 
-    <footer class="auth-footer">© 2026 PulsePay · MBU litsenziyalangan</footer>
+    <footer class="auth-footer">{{ t('footer.copyright') }}</footer>
   </div>
 </template>
 
@@ -857,5 +911,75 @@ async function submitOtp() {
   border-top: 1px solid rgba(247, 244, 237, 0.08);
   font-size: 12.5px;
   color: rgba(247, 244, 237, 0.4);
+}
+
+/* Language dropdown */
+.auth-lang-dropdown {
+  position: relative;
+  flex: none;
+}
+
+.auth-lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  background: rgba(247, 244, 237, 0.05);
+  border: 1px solid rgba(247, 244, 237, 0.12);
+  border-radius: 999px;
+  font-family: Manrope, sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f7f4ed;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.auth-lang-toggle:hover {
+  background: rgba(247, 244, 237, 0.1);
+}
+
+.auth-lang-menu {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  z-index: 10;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: #122923;
+  border: 1px solid rgba(247, 244, 237, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+.auth-lang-menu-item {
+  text-align: left;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(247, 244, 237, 0.8);
+  padding: 9px 12px;
+  font-family: Manrope, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.auth-lang-menu-item:hover {
+  background: rgba(247, 244, 237, 0.08);
+  color: #f7f4ed;
+}
+
+.auth-lang-menu-item.active {
+  background: rgba(41, 190, 140, 0.15);
+  color: #29be8c;
 }
 </style>

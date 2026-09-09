@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { register as apiRegister, requestOtp, getDevOtp, verifyOtp } from '@/lib/api/auth';
-import type { RegisterPayload, LoginPayload } from '@/lib/api/auth';
+import { registerOtp, registerConfirm, requestOtp, getDevOtp, verifyOtp } from '@/lib/api/auth';
+import type { LoginPayload } from '@/lib/api/auth';
 import { getToken, setToken, clearToken, decodeJwtPayload, isTokenExpired } from '@/lib/token';
 
 export interface AuthUser {
@@ -39,14 +39,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(payload: RegisterPayload): Promise<void> {
+  async function register(phoneE164: string, fullName: string): Promise<void> {
     isLoading.value = true;
     try {
-      // Create account, then auto-verify phone via mock OTP (dev flow)
-      await apiRegister(payload);
-      await requestOtp(payload.phoneE164);
-      const { code } = await getDevOtp(payload.phoneE164);
-      const res = await verifyOtp(payload.phoneE164, code);
+      // Two-step OTP registration: send OTP, then auto-confirm via dev endpoint
+      await registerOtp(phoneE164);
+      const { code } = await getDevOtp(phoneE164);
+      const res = await registerConfirm(phoneE164, code, fullName);
       setToken(res.accessToken);
       _hydrateUser(res.accessToken);
     } finally {

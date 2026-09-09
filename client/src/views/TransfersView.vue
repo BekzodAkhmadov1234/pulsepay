@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTransfersStore } from '@/stores/transfers';
 import type { TransferDto } from '@/lib/api/transfers';
+
+const { t } = useI18n();
 
 const store = useTransfersStore();
 
@@ -12,11 +15,11 @@ onMounted(() => {
 const txFilter = ref<'all' | 'credit' | 'debit'>('all');
 const selectedTx = ref<TransferDto | null>(null);
 
-const filters = [
-  { label: 'Barchasi', value: 'all' as const },
-  { label: 'Kirim', value: 'credit' as const },
-  { label: 'Chiqim', value: 'debit' as const },
-];
+const filters = computed(() => [
+  { label: t('transfers.filter_all'), value: 'all' as const },
+  { label: t('transfers.filter_credit'), value: 'credit' as const },
+  { label: t('transfers.filter_debit'), value: 'debit' as const },
+]);
 
 function parseTxDate(iso: string | null | undefined): Date | null {
   if (!iso) return null;
@@ -40,12 +43,12 @@ function txDayKey(tx: TransferDto): string {
 
 function txDayLabel(tx: TransferDto): string {
   const d = parseTxDate(tx.processedAt ?? tx.initiatedAt);
-  if (!d) return 'Boshqa';
+  if (!d) return t('common.today');
   const today = new Date();
-  if (isSameDay(d, today)) return 'Bugun';
+  if (isSameDay(d, today)) return t('common.today');
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(d, yesterday)) return 'Kecha';
+  if (isSameDay(d, yesterday)) return t('common.yesterday');
   return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
 }
 
@@ -67,12 +70,12 @@ const groupedTransfers = computed(() => {
     seen.get(key)!.items.push(tx);
   }
   for (const g of groups) {
-    const vol = g.items.reduce((s, t) => s + t.amountUzs, 0);
+    const vol = g.items.reduce((s, tx) => s + tx.amountUzs, 0);
     const fmt = new Intl.NumberFormat('uz-UZ', {
       style: 'decimal',
       maximumFractionDigits: 0,
     }).format(vol);
-    g.total = `${g.items.length} ta · aylanma ${fmt} UZS`;
+    g.total = t('transfers.group_total', { count: g.items.length, amount: fmt });
   }
   return groups;
 });
@@ -105,17 +108,17 @@ function formatDateTime(iso: string | null | undefined) {
 }
 
 function statusLabel(status: string) {
-  if (status === 'completed') return "Muvaffaqiyatli o'tkazma";
-  if (status === 'failed') return "Muvaffaqiyatsiz o'tkazma";
-  if (status === 'processing') return 'Jarayonda';
+  if (status === 'completed') return t('transfers.status_completed');
+  if (status === 'failed') return t('transfers.status_failed');
+  if (status === 'processing') return t('transfers.status_processing');
   return status;
 }
 
 function transferTypeLabel(tx: TransferDto): string {
-  if (tx.transferTypeId === 2) return "Bank hisobiga o'tkazma";
-  if (tx.transferTypeId === 3) return "Savdogar to'lovi";
-  if (tx.transferTypeId === 4) return 'Bankdan kartaga';
-  return "P2P o'tkazma";
+  if (tx.transferTypeId === 2) return t('transfers.type_bank');
+  if (tx.transferTypeId === 3) return t('transfers.type_merchant');
+  if (tx.transferTypeId === 4) return t('transfers.type_bank_pull');
+  return t('transfers.type_p2p');
 }
 </script>
 
@@ -144,7 +147,7 @@ function transferTypeLabel(tx: TransferDto): string {
               color: #f7f4ed;
             "
           >
-            O'tkazmalar
+            {{ t('transfers.title') }}
           </h1>
           <p
             style="
@@ -154,7 +157,7 @@ function transferTypeLabel(tx: TransferDto): string {
               margin: 10px 0 0;
             "
           >
-            Sizning to'lov tarixi
+            {{ t('transfers.subtitle') }}
           </p>
         </div>
         <RouterLink to="/send" class="pp-btn-primary" style="padding: 13px 22px; font-size: 13.5px">
@@ -170,7 +173,7 @@ function transferTypeLabel(tx: TransferDto): string {
           >
             <path d="M12 19V5m0 0-6 6m6-6 6 6"></path>
           </svg>
-          Pul jo'natish
+          {{ t('common.send_money') }}
         </RouterLink>
       </div>
 
@@ -210,7 +213,7 @@ function transferTypeLabel(tx: TransferDto): string {
             color: #f7f4ed;
           "
         >
-          Tranzaksiyalar tarixi
+          {{ t('transfers.history') }}
         </h2>
         <div class="pp-filter-bar">
           <button
@@ -259,12 +262,12 @@ function transferTypeLabel(tx: TransferDto): string {
           <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
         </svg>
         <p style="font-size: 15px; font-weight: 600; color: #f7f4ed; margin: 0 0 8px">
-          Hozircha o'tkazmalar yo'q
+          {{ t('transfers.empty_title') }}
         </p>
         <p style="font-size: 13px; color: rgba(247, 244, 237, 0.5); margin: 0 0 20px">
-          Boshlash uchun boshqa PulsePay foydalanuvchisiga pul jo'nating.
+          {{ t('transfers.empty_subtitle') }}
         </p>
-        <RouterLink to="/send" class="pp-btn-primary">Pul jo'natish</RouterLink>
+        <RouterLink to="/send" class="pp-btn-primary">{{ t('common.send_money') }}</RouterLink>
       </div>
 
       <!-- Transfer groups -->
@@ -416,28 +419,28 @@ function transferTypeLabel(tx: TransferDto): string {
         </div>
         <div class="pp-modal-body">
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Jo'natuvchi</span>
+            <span class="pp-modal-label">{{ t('common.sender') }}</span>
             <span class="pp-modal-val">{{ selectedTx.senderName || '—' }}</span>
           </div>
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Qabul qiluvchi</span>
+            <span class="pp-modal-label">{{ t('common.recipient') }}</span>
             <span class="pp-modal-val">{{ selectedTx.recipientName || '—' }}</span>
           </div>
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Komissiya</span>
+            <span class="pp-modal-label">{{ t('common.fee') }}</span>
             <span class="pp-modal-val">{{
               selectedTx.feeAmountUzs ? formatAmount(selectedTx.feeAmountUzs) : '0 UZS'
             }}</span>
           </div>
           <div class="pp-modal-row">
-            <span class="pp-modal-label">Sana</span>
+            <span class="pp-modal-label">{{ t('common.date') }}</span>
             <span class="pp-modal-val">{{
               formatDateTime(selectedTx.processedAt ?? selectedTx.initiatedAt)
             }}</span>
           </div>
         </div>
         <div class="pp-modal-footer">
-          <button class="pp-modal-close" @click="selectedTx = null">Yopish</button>
+          <button class="pp-modal-close" @click="selectedTx = null">{{ t('common.close') }}</button>
         </div>
       </div>
     </div>

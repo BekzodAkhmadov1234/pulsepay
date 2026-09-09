@@ -1,0 +1,23 @@
+databaseChangeLog:
+
+  # Expand otp_codes.purpose check to support registration and account deletion flows
+  - changeSet:
+      id: 601-otp-purpose-expand
+      author: pulsepay
+      changes:
+        - sql:
+            sql: ALTER TABLE otp_codes DROP CONSTRAINT chk_otp_purpose;
+        - sql:
+            sql: ALTER TABLE otp_codes ADD CONSTRAINT chk_otp_purpose
+                   CHECK (purpose IN ('login','transfer','card_add','registration','account_delete'));
+
+  # Allow 'web' as a valid platform so browser sessions can be tracked alongside mobile
+  - changeSet:
+      id: 601-devices-platform-web
+      author: pulsepay
+      changes:
+        - sql:
+            sql: ALTER TABLE devices DROP CONSTRAINT chk_devices_platform;
+        - sql:
+            sql: ALTER TABLE devices ADD CONSTRAINT chk_devices_platform
+                   CHECK (platform IN ('ios','android','web'));

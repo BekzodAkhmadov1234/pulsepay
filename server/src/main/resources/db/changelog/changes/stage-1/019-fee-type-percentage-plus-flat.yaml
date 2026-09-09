@@ -14,3 +14,13 @@ databaseChangeLog:
             sql: >
               ALTER TABLE fee_rules ADD CONSTRAINT chk_fee_rules_type
               CHECK (fee_type IN ('fixed','percentage','tiered','percentage_plus_flat'));
+
+  # ── Expand fee_type column to hold 'percentage_plus_flat' (20 chars) ───────────
+  - changeSet:
+      id: 019-fee-type-expand-column
+      author: pulsepay
+      changes:
+        - modifyDataType:
+            tableName: fee_rules
+            columnName: fee_type
+            newDataType: VARCHAR(25)

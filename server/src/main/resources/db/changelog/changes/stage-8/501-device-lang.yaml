@@ -16,7 +16,8 @@ databaseChangeLog:
                   defaultValue: 'uz'
                   constraints:
                     nullable: false
-        - addCheckConstraint:
-            tableName: devices
-            constraintName: chk_devices_lang
-            checkCondition: "lang IN ('uz', 'ru', 'en', 'zh', 'uz_c')"
+        - sql:
+            sql: >
+              ALTER TABLE devices
+              ADD CONSTRAINT chk_devices_lang
+              CHECK (lang IN ('uz', 'ru', 'en', 'zh', 'uz_c'));

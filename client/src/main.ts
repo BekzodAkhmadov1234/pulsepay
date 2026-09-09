@@ -8,6 +8,7 @@ import { Quasar, Notify, Dialog } from 'quasar';
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import App from './App.vue';
 import router from './router';
+import { i18n } from './i18n';
 import { useAuthStore } from './stores/auth';
 import { useAdminAuthStore } from './stores/adminAuth';
 
@@ -21,6 +22,7 @@ const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
+app.use(i18n);
 app.use(VueQueryPlugin, { queryClient });
 app.use(Quasar, {
   plugins: { Notify, Dialog },
